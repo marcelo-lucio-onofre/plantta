@@ -223,6 +223,7 @@ function ItemRow({ item, grupos, materiais, onChange, onRemove, onOpcoesChange, 
 const ARQUIVOS_PLANTA_VAZIOS: Planta["arquivos"] = {
   plantaArquitetonicaPdf: [], plantaImagem: [], dwg: [], plantaHumanizada: [], plantaMobiliada: [],
   plantaEletrica: [], plantaHidraulica: [], plantaPontos: [], memorialTipologia: [], renderizacoes: [],
+  modelo3d: [],
 };
 
 const META_ARQUIVOS_PLANTA: { key: CategoriaArquivoPlanta; label: string; accept: string }[] = [
@@ -236,6 +237,7 @@ const META_ARQUIVOS_PLANTA: { key: CategoriaArquivoPlanta; label: string; accept
   { key: "plantaPontos", label: "Planta de pontos", accept: ".pdf,.dwg" },
   { key: "memorialTipologia", label: "Memorial da tipologia", accept: ".pdf,.doc,.docx" },
   { key: "renderizacoes", label: "Renderizações dos ambientes", accept: "image/*" },
+  { key: "modelo3d", label: "Modelo 3D dos ambientes (.glb)", accept: ".glb,.gltf" },
 ];
 
 /** Linha compacta de upload — uma por categoria, sem drop-zone grande

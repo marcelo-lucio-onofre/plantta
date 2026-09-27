@@ -1,0 +1,8 @@
+{
+  "name": "temp-personalize",
+  "private": true,
+  "description": "Root wrapper so StackBlitz (and similar GitHub importers) boot straight into app/, where the actual Vite project lives.",
+  "scripts": {
+    "dev": "cd app && npm install --legacy-peer-deps --ignore-scripts && npm run dev -- --host"
+  }
+}

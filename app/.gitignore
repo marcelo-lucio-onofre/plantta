@@ -12,6 +12,19 @@ dist
 dist-ssr
 *.local
 
+# Matéria-prima do pipeline de compressão (scripts/compress-model.mjs) —
+# regenerada com `node scripts/fetch-sample-assets.mjs`, não é o asset
+# servido pelo app (esse fica em public/models/, versionado).
+/assets-source
+
+# E2E tests (Playwright) and coverage output
+/test-results
+/playwright-report
+/blob-report
+/playwright/.cache
+/.nyc_output
+/coverage
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
