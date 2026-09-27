@@ -14,13 +14,29 @@ test.describe("Cliente — Seleção com preview 3D e AR", () => {
     await expect(page.locator("model-viewer")).toBeVisible({ timeout: 15_000 });
   });
 
-  test("configurador do ambiente inteiro aparece só depois de escolher um material com foto", async ({ page }) => {
-    await gotoComoCliente(page, VINCULOS.aurora, "/selecao/revestimento");
-    await expect(page.getByText("Ver Banheiro Suíte completo em 3D")).toHaveCount(0);
+  test("ambiente já mostra o material padrão em 3D e atualiza ao vivo ao trocar, sem fechar o painel", async ({ page }) => {
+    await gotoComoCliente(page, VINCULOS.aurora, "/selecao/piso_banheiro");
 
-    await page.click('button:has-text("Porcelanato Off-White Grande Formato")');
+    // O painel já aparece com o padrão do empreendimento, antes de qualquer
+    // troca — o cliente vê "como já está" antes de decidir mudar algo.
     await page.click('button:has-text("Ver Banheiro Suíte completo em 3D")');
     await expect(page.locator("canvas")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Piso: Antiderrapante Bege/)).toBeVisible();
+
+    // Troca o material com o painel 3D ainda aberto — a cena atualiza ao
+    // vivo, sem precisar fechar/reabrir o preview.
+    await page.click('button:has-text("Porcelanato Antiderrapante Areia")');
+    await expect(page.getByText(/Piso: Antiderrapante Areia/)).toBeVisible();
+    await expect(page.locator("canvas")).toBeVisible();
+  });
+
+  test("configurador do ambiente reage ao trocar o revestimento, não só o piso", async ({ page }) => {
+    await gotoComoCliente(page, VINCULOS.aurora, "/selecao/revestimento");
+    await page.click('button:has-text("Ver Banheiro Suíte completo em 3D")');
+    await expect(page.locator("canvas")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Revestimento:/)).toHaveCount(0);
+
+    await page.click('button:has-text("Porcelanato Off-White Grande Formato")');
     await expect(page.getByText(/Revestimento: Off-White Grande Formato/)).toBeVisible();
   });
 

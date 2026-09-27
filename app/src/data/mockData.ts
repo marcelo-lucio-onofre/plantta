@@ -218,7 +218,7 @@ export const ambientes: Ambiente[] = [
         prazoInicio: "01/09/2026",
         prazoFim: "20/10/2026",
         opcoes: [
-          { id: "p1", nome: "Porcelanato Standard 60×60", preco: 6000, padrao: true },
+          { id: "p1", nome: "Porcelanato Standard 60×60", preco: 6000, padrao: true, materialCatalogItemId: "mc-013" },
           { id: "p2", nome: "Porcelanato Portobello Premium 80×80", preco: 8500, materialCatalogItemId: "mc-001" },
           { id: "p3", nome: "Porcelanato Marmorizado Extra", preco: 9800 },
           { id: "p0", nome: "Remover item (gera crédito)", preco: 0, remocao: true },
@@ -282,7 +282,7 @@ export const ambientes: Ambiente[] = [
         prazoInicio: "20/08/2026",
         prazoFim: "15/09/2026",
         opcoes: [
-          { id: "b1", nome: "Granito Cinza Corumbá", preco: 3200, padrao: true },
+          { id: "b1", nome: "Granito Cinza Corumbá", preco: 3200, padrao: true, materialCatalogItemId: "mc-014" },
           { id: "b2", nome: "Quartzo Branco Ibiza", preco: 4900 },
           { id: "b3", nome: "Dekton Sirius", preco: 6100, materialCatalogItemId: "mc-002" },
           { id: "b0", nome: "Remover item (gera crédito)", preco: 0, remocao: true },
@@ -330,7 +330,7 @@ export const ambientes: Ambiente[] = [
         prazoInicio: "01/09/2026",
         prazoFim: "20/10/2026",
         opcoes: [
-          { id: "psb1", nome: "Porcelanato Antiderrapante Bege", preco: 1900, padrao: true },
+          { id: "psb1", nome: "Porcelanato Antiderrapante Bege", preco: 1900, padrao: true, materialCatalogItemId: "mc-015" },
           { id: "psb2", nome: "Porcelanato Antiderrapante Areia", preco: 2300, materialCatalogItemId: "mc-011" },
           { id: "psb0", nome: "Remover item (gera crédito)", preco: 0, remocao: true },
         ],
@@ -685,6 +685,49 @@ export const materialCatalogInicial: MaterialCatalogItem[] = [
       "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2Ij48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iI2U0ZTNkZSIvPjxjaXJjbGUgY3g9IjE4MS40IiBjeT0iMzIuNCIgcj0iNS4xIiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxMDMuOCIgY3k9Ijg1LjkiIHI9IjYuMyIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTg4LjYiIGN5PSIxNTQuMSIgcj0iMi4wIiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIzNS40IiBjeT0iMTA0LjkiIHI9IjguMCIgZmlsbD0iI2M5YzljNCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTIwLjYiIGN5PSIxODUuNyIgcj0iNS41IiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxMTguOSIgY3k9IjI3LjMiIHI9IjIuMiIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTkxLjkiIGN5PSIwLjYiIHI9IjcuOSIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNTkuNSIgY3k9IjE4Mi45IiByPSI3LjciIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjEyOS45IiBjeT0iNzYuMyIgcj0iMi40IiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIyMjkuNSIgY3k9IjM4LjMiIHI9IjMuMCIgZmlsbD0iI2M5YzljNCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjAyLjMiIGN5PSIyMTQuNSIgcj0iNS4zIiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxNTkuMyIgY3k9Ijc3LjkiIHI9IjQuMyIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iOTQuOCIgY3k9IjUyLjEiIHI9IjcuMiIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMzcuMSIgY3k9IjE2My45IiByPSIyLjkiIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjIzNC45IiBjeT0iMTA0LjciIHI9IjcuNSIgZmlsbD0iI2M5YzljNCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjIuOCIgY3k9IjI1LjgiIHI9IjQuMyIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTY2LjIiIGN5PSIxMzguNCIgcj0iNS40IiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSI5My41IiBjeT0iMTkwLjEiIHI9IjYuNiIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMzkuNyIgY3k9IjY1LjYiIHI9IjYuNCIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTExLjgiIGN5PSIxMjguMyIgcj0iNS4xIiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxNjIuMyIgY3k9IjExMy4zIiByPSI1LjUiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjE5LjUiIGN5PSIyNTAuMCIgcj0iNC4wIiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxODcuNSIgY3k9IjU5LjkiIHI9IjMuNyIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTI2LjIiIGN5PSIxNzcuNCIgcj0iNi4wIiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxMDQuMCIgY3k9IjIzMS4xIiByPSI3LjciIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjEzNy4xIiBjeT0iNDYuMCIgcj0iMi4yIiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxOTcuMyIgY3k9IjE0Ny45IiByPSIzLjAiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjI5LjYiIGN5PSI4NS4xIiByPSI3LjAiIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjExLjciIGN5PSIxMTYuMCIgcj0iNC45IiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIzNC4yIiBjeT0iMjcuMCIgcj0iNi4yIiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSI1OS42IiBjeT0iNjYuNyIgcj0iNC41IiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxMDcuMiIgY3k9IjM5LjIiIHI9IjQuNSIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTMuOSIgY3k9IjQ0LjMiIHI9IjMuMSIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTY2LjkiIGN5PSI4OC40IiByPSI2LjYiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjE5LjkiIGN5PSIxMzQuNyIgcj0iNS4xIiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIyMTAuNCIgY3k9IjI0NC4wIiByPSI1LjIiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjI1NS4zIiBjeT0iMTIzLjEiIHI9IjMuNyIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTU2LjYiIGN5PSIxODAuOSIgcj0iNC4yIiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxNTcuOSIgY3k9IjE3NC43IiByPSIzLjUiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjEzNC4xIiBjeT0iMjQxLjIiIHI9IjIuNyIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNzMuNiIgY3k9IjE3Ny42IiByPSI3LjQiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjIzNC4xIiBjeT0iOTQuMiIgcj0iNC42IiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSI5NC4zIiBjeT0iNDcuMSIgcj0iNS41IiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIyMDAuMiIgY3k9IjE0Mi43IiByPSI1LjIiIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjY5LjUiIGN5PSI3MS4xIiByPSI1LjkiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjE0LjMiIGN5PSI5LjMiIHI9IjcuNiIgZmlsbD0iI2M5YzljNCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNzAuMyIgY3k9IjEwNi4zIiByPSI1LjAiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjM2LjUiIGN5PSI2Ny41IiByPSI3LjkiIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjE0MC4xIiBjeT0iNTkuMSIgcj0iMy4zIiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxOTMuNiIgY3k9Ijk0LjYiIHI9IjMuNCIgZmlsbD0iI2M5YzljNCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTU5LjYiIGN5PSIwLjYiIHI9IjcuMyIgZmlsbD0iI2M5YzljNCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMzYuMCIgY3k9IjIzNi4zIiByPSIyLjUiIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjUwLjkiIGN5PSI4Ni40IiByPSI1LjYiIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjU4LjUiIGN5PSI3LjEiIHI9IjUuOSIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMzkuNyIgY3k9IjQxLjgiIHI9IjQuNyIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNTguOCIgY3k9IjgwLjgiIHI9IjYuNCIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNDIuNyIgY3k9IjIwOS4wIiByPSI0LjYiIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjgwLjAiIGN5PSIxNTIuNyIgcj0iNi45IiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIzNy4yIiBjeT0iMTIxLjIiIHI9IjcuOCIgZmlsbD0iI2M5YzljNCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjE2LjEiIGN5PSIxMzUuNyIgcj0iMi45IiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48L3N2Zz4=",
     roughness: 0.25,
     metalness: 0.08,
+  },
+  // Materiais dos itens PADRÃO (não só das opções de troca) — sem isso, o
+  // ambiente não tem nenhuma foto até o cliente trocar algo, e o
+  // configurador 3D nunca aparece pra mostrar "como já está" antes da
+  // troca (ver docs/padrao-plantas-dxf.md — a ideia é visualizar de+para).
+  {
+    id: "mc-013",
+    construtoraId: "00001",
+    categoriaId: categoriaId("00001", "Piso"),
+    marcaId: marcaId("00001", "Portinari"),
+    fornecedorId: "forn-001",
+    modelo: "Standard 60×60",
+    sku: "PTN-STD-6060",
+    imagemUrl:
+      "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2Ij48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iI2M5YWI3YyIvPjxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2Q5YzE5YSIvPjxyZWN0IHg9IjY2IiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjOWFiN2MiLz48cmVjdCB4PSIxMzAiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2Q5YzE5YSIvPjxyZWN0IHg9IjE5NCIgeT0iMiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzlhYjdjIi8+PHJlY3QgeD0iMiIgeT0iNjYiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2M5YWI3YyIvPjxyZWN0IHg9IjY2IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZDljMTlhIi8+PHJlY3QgeD0iMTMwIiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzlhYjdjIi8+PHJlY3QgeD0iMTk0IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZDljMTlhIi8+PHJlY3QgeD0iMiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNkOWMxOWEiLz48cmVjdCB4PSI2NiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjOWFiN2MiLz48cmVjdCB4PSIxMzAiIHk9IjEzMCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZDljMTlhIi8+PHJlY3QgeD0iMTk0IiB5PSIxMzAiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2M5YWI3YyIvPjxyZWN0IHg9IjIiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzlhYjdjIi8+PHJlY3QgeD0iNjYiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZDljMTlhIi8+PHJlY3QgeD0iMTMwIiB5PSIxOTQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2M5YWI3YyIvPjxyZWN0IHg9IjE5NCIgeT0iMTk0IiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNkOWMxOWEiLz48L3N2Zz4=",
+    roughness: 0.6,
+    metalness: 0,
+  },
+  {
+    id: "mc-014",
+    construtoraId: "00001",
+    categoriaId: categoriaId("00001", "Bancada"),
+    marcaId: marcaId("00001", "Incepa"),
+    fornecedorId: "forn-001",
+    modelo: "Granito Cinza Corumbá",
+    sku: "GRN-CORUMBA",
+    imagemUrl:
+      "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2Ij48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iIzU3NWY2NCIvPjxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iIzZiNzM3OCIvPjxyZWN0IHg9IjY2IiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiM1NzVmNjQiLz48cmVjdCB4PSIxMzAiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iIzZiNzM3OCIvPjxyZWN0IHg9IjE5NCIgeT0iMiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjNTc1ZjY0Ii8+PHJlY3QgeD0iMiIgeT0iNjYiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iIzU3NWY2NCIvPjxyZWN0IHg9IjY2IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjNmI3Mzc4Ii8+PHJlY3QgeD0iMTMwIiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjNTc1ZjY0Ii8+PHJlY3QgeD0iMTk0IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjNmI3Mzc4Ii8+PHJlY3QgeD0iMiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiM2YjczNzgiLz48cmVjdCB4PSI2NiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiM1NzVmNjQiLz48cmVjdCB4PSIxMzAiIHk9IjEzMCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjNmI3Mzc4Ii8+PHJlY3QgeD0iMTk0IiB5PSIxMzAiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iIzU3NWY2NCIvPjxyZWN0IHg9IjIiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjNTc1ZjY0Ii8+PHJlY3QgeD0iNjYiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjNmI3Mzc4Ii8+PHJlY3QgeD0iMTMwIiB5PSIxOTQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iIzU3NWY2NCIvPjxyZWN0IHg9IjE5NCIgeT0iMTk0IiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiM2YjczNzgiLz48L3N2Zz4=",
+    roughness: 0.35,
+    metalness: 0.05,
+  },
+  {
+    id: "mc-015",
+    construtoraId: "00001",
+    categoriaId: categoriaId("00001", "Piso"),
+    marcaId: marcaId("00001", "Celite"),
+    fornecedorId: "forn-001",
+    modelo: "Antiderrapante Bege",
+    sku: "CLT-ANTID-BEGE",
+    imagemUrl:
+      "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2Ij48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iI2IzOWM3NiIvPjxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2M3YjI4ZiIvPjxyZWN0IHg9IjY2IiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNiMzljNzYiLz48cmVjdCB4PSIxMzAiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2M3YjI4ZiIvPjxyZWN0IHg9IjE5NCIgeT0iMiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYjM5Yzc2Ii8+PHJlY3QgeD0iMiIgeT0iNjYiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2IzOWM3NiIvPjxyZWN0IHg9IjY2IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzdiMjhmIi8+PHJlY3QgeD0iMTMwIiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYjM5Yzc2Ii8+PHJlY3QgeD0iMTk0IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzdiMjhmIi8+PHJlY3QgeD0iMiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjN2IyOGYiLz48cmVjdCB4PSI2NiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNiMzljNzYiLz48cmVjdCB4PSIxMzAiIHk9IjEzMCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzdiMjhmIi8+PHJlY3QgeD0iMTk0IiB5PSIxMzAiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2IzOWM3NiIvPjxyZWN0IHg9IjIiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYjM5Yzc2Ii8+PHJlY3QgeD0iNjYiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzdiMjhmIi8+PHJlY3QgeD0iMTMwIiB5PSIxOTQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2IzOWM3NiIvPjxyZWN0IHg9IjE5NCIgeT0iMTk0IiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjN2IyOGYiLz48L3N2Zz4=",
+    roughness: 0.6,
+    metalness: 0,
   },
   { id: "mc-003", construtoraId: "00001", categoriaId: categoriaId("00001", "Louças e Metais"), marcaId: marcaId("00001", "Docol"), fornecedorId: "forn-003", modelo: "Benefit Black", sku: "DOC-BEN-BLK", imagemUrl: null },
   { id: "mc-004", construtoraId: "00001", categoriaId: categoriaId("00001", "Cuba"), marcaId: marcaId("00001", "Tramontina"), fornecedorId: "forn-004", modelo: "Morgana Dupla + Gourmet", sku: "TRAM-MORG-DP", imagemUrl: null },
