@@ -12,11 +12,33 @@ import type {
   MaterialCatalogItem,
   Pessoa,
   Planta,
+  PlantaGeometria3D,
   Solicitacao,
   Vinculo,
 } from "../domain/types";
 import { plantaKey } from "../domain/calculations";
 import { CATEGORIAS_MATERIAL, MARCAS_SUGERIDAS } from "../domain/catalogoReferencia";
+import { parseDxfAmbientes } from "../lib/dxfPlanta";
+import dxfSala from "../assets/plantas-dxf/sala.dxf?raw";
+import dxfCozinha from "../assets/plantas-dxf/cozinha.dxf?raw";
+import dxfBanheiro from "../assets/plantas-dxf/banheiro.dxf?raw";
+import dxfVaranda from "../assets/plantas-dxf/varanda.dxf?raw";
+
+// Geometria 3D real da Planta A de Residencial Aurora, gerada a partir dos
+// DXFs de exemplo em src/assets/plantas-dxf/ (padrão ARQ-AMB/ARQ-AMB-TXT —
+// ver docs/padrao-plantas-dxf.md e lib/dxfPlanta.ts). Isso roda o parser de
+// verdade no carregamento do app, não são coordenadas digitadas à mão —
+// prova a esteira DXF → geometria 3D de ponta a ponta com os 4 ambientes
+// que a Planta A já tem (sala, cozinha, banheiro, varanda).
+const geometriaPlantaAAurora: PlantaGeometria3D = {
+  peDireitoM: 2.6,
+  ambientes: [
+    ...parseDxfAmbientes(dxfSala, "m"),
+    ...parseDxfAmbientes(dxfCozinha, "m"),
+    ...parseDxfAmbientes(dxfBanheiro, "m"),
+    ...parseDxfAmbientes(dxfVaranda, "m"),
+  ],
+};
 
 // Plain-data deep clone (Ambiente/Item/Opcao are all JSON-safe: no
 // functions/Dates) — used so each empreendimento gets its own independent
@@ -368,7 +390,7 @@ export const ambientes: Ambiente[] = [
         prazoFim: "20/10/2026",
         opcoes: [
           { id: "pv1", nome: "Porcelanato Externo Cinza", preco: 3800, padrao: true },
-          { id: "pv2", nome: "Porcelanato Amadeirado Deck", preco: 5200 },
+          { id: "pv2", nome: "Porcelanato Amadeirado Deck", preco: 5200, materialCatalogItemId: "mc-001" },
           { id: "pv0", nome: "Remover item (gera crédito)", preco: 0, remocao: true },
         ],
       },
@@ -528,7 +550,7 @@ const ARQUIVOS_PLANTA_VAZIOS: Planta["arquivos"] = {
 // pertence à Planta, não ao empreendimento (ver domain/types.ts Planta).
 export const plantasPorEmpreendimento: Record<string, Planta[]> = {
   "00001": [
-    { id: "planta-a", codigo: "PA-01", nome: "Planta A — 2 quartos", tipologia: "2 quartos", descricao: "2 dormitórios, 1 suíte", areaPrivativaM2: 68, areaTotalM2: 78, quartos: 2, suites: 1, banheiros: 2, vagas: 1, numeroAmbientes: 6, versao: "1.0", dataVersao: "10/01/2026", status: "ativa", opcoesPermitidas: "Piso, revestimento, metais, louças", restricoes: "Sem alteração de estrutura ou hidráulica de posição fixa", unidadesLabel: "Torres A e B, andares 2–14", arquivos: ARQUIVOS_PLANTA_VAZIOS },
+    { id: "planta-a", codigo: "PA-01", nome: "Planta A — 2 quartos", tipologia: "2 quartos", descricao: "2 dormitórios, 1 suíte", areaPrivativaM2: 68, areaTotalM2: 78, quartos: 2, suites: 1, banheiros: 2, vagas: 1, numeroAmbientes: 6, versao: "1.0", dataVersao: "10/01/2026", status: "ativa", opcoesPermitidas: "Piso, revestimento, metais, louças", restricoes: "Sem alteração de estrutura ou hidráulica de posição fixa", unidadesLabel: "Torres A e B, andares 2–14", arquivos: ARQUIVOS_PLANTA_VAZIOS, geometria3D: geometriaPlantaAAurora },
     { id: "planta-b", codigo: "PB-01", nome: "Planta B — 3 quartos", tipologia: "3 quartos", descricao: "3 dormitórios, suíte master com closet opcional", areaPrivativaM2: 94, areaTotalM2: 108, quartos: 3, suites: 1, banheiros: 3, vagas: 2, numeroAmbientes: 8, versao: "1.0", dataVersao: "10/01/2026", status: "ativa", opcoesPermitidas: "Piso, revestimento, metais, louças, bancadas", restricoes: "Sem alteração de estrutura ou hidráulica de posição fixa", unidadesLabel: "Torres A e B, andares 15–20 (coberturas e garden)", arquivos: ARQUIVOS_PLANTA_VAZIOS },
   ],
   "00002": [{ id: "planta-unica", codigo: "PU-01", nome: "Planta Única", tipologia: "2 quartos", descricao: "2 dormitórios, 1 suíte", areaPrivativaM2: 62, areaTotalM2: 70, quartos: 2, suites: 1, banheiros: 2, vagas: 1, numeroAmbientes: 6, versao: "1.0", dataVersao: "05/02/2026", status: "ativa", opcoesPermitidas: "Piso, revestimento, metais, louças", restricoes: "Sem alteração de estrutura", unidadesLabel: "Todas as unidades", arquivos: ARQUIVOS_PLANTA_VAZIOS }],

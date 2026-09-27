@@ -56,6 +56,18 @@ export function SelecaoPage() {
     return null;
   }, [catalogo, activeVinculo, itemId]);
 
+  // Contorno real do ambiente, se a Planta desta unidade já tiver um DXF
+  // processado (ver docs/padrao-plantas-dxf.md) — sem isso, o configurador
+  // 3D cai de volta no cômodo genérico de sempre. Calculado antes do early
+  // return abaixo pra não violar a ordem dos Hooks.
+  const geometria3D = useMemo(() => {
+    if (!activeVinculo || !found) return undefined;
+    const planta = catalogo.listPlantas(activeVinculo.empreendimentoId).find((p) => p.id === activeVinculo.plantaId);
+    const ambienteGeo = planta?.geometria3D?.ambientes.find((a) => a.ambienteId === found.ambiente.id);
+    if (!ambienteGeo || !planta?.geometria3D) return undefined;
+    return { pontosM: ambienteGeo.pontosM, peDireitoM: planta.geometria3D.peDireitoM };
+  }, [catalogo, activeVinculo, found]);
+
   if (!found) return <Navigate to="/personalizacoes" replace />;
   const { ambiente, item } = found;
   const allowanceGroup = allowanceGroups.find((g) => g.id === item.allowanceGroupId);
@@ -132,6 +144,7 @@ export function SelecaoPage() {
                   piso={superficiesAmbiente.piso}
                   revestimento={superficiesAmbiente.revestimento}
                   bancada={superficiesAmbiente.bancada}
+                  geometriaReal={geometria3D}
                   height={280}
                 />
               </Suspense>

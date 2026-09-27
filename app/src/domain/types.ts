@@ -193,6 +193,25 @@ export type CategoriaArquivoPlanta =
   | "renderizacoes"
   | "modelo3d";
 
+/**
+ * Contorno real de um ambiente extraído de uma planta DXF — ver
+ * docs/padrao-plantas-dxf.md. `pontosM` é o polígono fechado do ambiente,
+ * já em metros e centrado no próprio ambiente (não na planta inteira).
+ */
+export interface PlantaAmbienteGeometria {
+  ambienteId: string;
+  pontosM: [number, number][];
+}
+
+/** Geometria 3D real de uma Planta, derivada do DXF enviado no cadastro —
+ * substitui o ambiente genérico/placeholder quando presente (ver
+ * AmbienteConfigurador3D). `null`/ausente = planta sem DXF processado,
+ * mantém o comportamento genérico atual. */
+export interface PlantaGeometria3D {
+  peDireitoM: number;
+  ambientes: PlantaAmbienteGeometria[];
+}
+
 export interface Planta {
   id: string;
   codigo: string;
@@ -215,6 +234,9 @@ export interface Planta {
    * ex.: "101-110, 201-210". Não é usado pra resolver vínculo algum. */
   unidadesLabel?: string;
   arquivos: Record<CategoriaArquivoPlanta, ArquivoCadastro[]>;
+  /** Ver PlantaGeometria3D — ausente/null enquanto a planta não tiver um
+   * DXF processado no padrão de docs/padrao-plantas-dxf.md. */
+  geometria3D?: PlantaGeometria3D | null;
 }
 
 /**

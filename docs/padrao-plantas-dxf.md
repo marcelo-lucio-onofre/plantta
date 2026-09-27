@@ -81,9 +81,23 @@ preview de acabamento, não navegação arquitetônica).
 | `COZINHA` | `cozinha` |
 | `BANHEIRO`, `BANHEIRO SUÍTE`, `BANHEIRO SOCIAL` | `banheiro` |
 | `QUARTO`, `DORMITÓRIO`, `SUÍTE` | `quarto` |
+| `VARANDA` | `varanda` |
 
 (Lista viva — cresce junto com os `ambiente.id` cadastrados no catálogo de
-cada construtora.)
+cada construtora. Implementada em `src/lib/dxfPlanta.ts`.)
+
+## Implementação de referência
+
+O parser (`src/lib/dxfPlanta.ts`, biblioteca `dxf-parser`) e o gerador de
+piso/paredes 3D a partir do polígono (`src/lib/plantaGeometria3D.ts`) já
+estão implementados e cobrem os 4 ambientes de exemplo em
+`src/assets/plantas-dxf/` (`sala.dxf`, `cozinha.dxf` — de propósito
+não-retangular, em L, pra provar que o pipeline não assume só caixas —,
+`banheiro.dxf`, `varanda.dxf`). `AmbienteConfigurador3D` usa essa geometria
+real automaticamente quando `Planta.geometria3D` está presente, com um
+selo "Ambiente gerado a partir da planta real (DXF)" na interface pra
+deixar claro pro cliente/construtora qual ambiente é real e qual ainda é
+genérico.
 
 ## O que acontece se a planta não seguir o padrão
 

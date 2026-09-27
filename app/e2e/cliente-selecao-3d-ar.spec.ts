@@ -24,6 +24,15 @@ test.describe("Cliente — Seleção com preview 3D e AR", () => {
     await expect(page.getByText(/Revestimento: Off-White Grande Formato/)).toBeVisible();
   });
 
+  test("ambiente com bancada (cozinha) usa a geometria real da planta", async ({ page }) => {
+    await gotoComoCliente(page, VINCULOS.aurora, "/selecao/bancada");
+    await page.click('button:has-text("Dekton Sirius")');
+    await page.click('button:has-text("Ver Cozinha completo em 3D")');
+    await expect(page.locator("canvas")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Ambiente gerado a partir da planta real/)).toBeVisible();
+    await expect(page.getByText(/Bancada: Sirius/)).toBeVisible();
+  });
+
   test("escolher uma opção atualiza o ledger de crédito", async ({ page }) => {
     await gotoComoCliente(page, VINCULOS.aurora, "/selecao/piso_sala");
     await page.click('button:has-text("Porcelanato Portobello Premium 80×80")');
