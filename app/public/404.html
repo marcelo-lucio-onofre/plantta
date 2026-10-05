@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>plantta — personalização de obra</title>
+    <script>
+      // Fallback de SPA pro GitHub Pages (padrão rafgraph/spa-github-pages):
+      // o Pages não tem rewrite de servidor, então um link direto ou F5 numa
+      // rota como /selecao/piso_sala cai aqui. Reescreve o caminho como
+      // query string e redireciona pro index.html, que decodifica de volta
+      // antes do React montar (ver o script equivalente em index.html) — sem
+      // isso só a landing funcionaria, qualquer outra rota daria 404.
+      var pathSegmentsToKeep = 1; // "/temp-personalize/"
+      var l = window.location;
+      l.replace(
+        l.protocol + "//" + l.hostname + (l.port ? ":" + l.port : "") +
+        l.pathname.split("/").slice(0, 1 + pathSegmentsToKeep).join("/") + "/?/" +
+        l.pathname.slice(1).split("/").slice(pathSegmentsToKeep).join("/").replace(/&/g, "~and~") +
+        (l.search ? "&" + l.search.slice(1).replace(/&/g, "~and~") : "") +
+        l.hash
+      );
+    </script>
+  </head>
+  <body></body>
+</html>
