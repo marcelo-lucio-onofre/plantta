@@ -1,5 +1,6 @@
 import { Link, Navigate, useParams } from "react-router-dom";
 import { Breadcrumb } from "../components/Breadcrumb";
+import { PreviewAlteracao } from "../components/PreviewAlteracao";
 import { Timeline } from "../components/Timeline";
 import { fmtDataHora, formatSolicitacaoRef, isEditavel, statusLabel, tempoDecorrido } from "../domain/calculations";
 import { useApp } from "../state/AppContext";
@@ -8,7 +9,7 @@ const PARAMETRICOS = new Set(["eletrica_sala", "hidraulica"]);
 
 export function PersonalizacaoDetalhePage() {
   const { id } = useParams<{ id: string }>();
-  const { solicitacoes, vinculos, selecionarVinculo } = useApp();
+  const { solicitacoes, vinculos, selecionarVinculo, catalogo, activeVinculo, vinculoChoices } = useApp();
 
   const solicitacao = solicitacoes.find((s) => s.id === id);
   if (!solicitacao) return <Navigate to="/personalizacoes" replace />;
@@ -18,6 +19,15 @@ export function PersonalizacaoDetalhePage() {
   const editavel = isEditavel(solicitacao);
   const editLink = PARAMETRICOS.has(solicitacao.itemId) ? "/calculadora" : `/selecao/${solicitacao.itemId}`;
   const aberta = !solicitacao.encerradoEm;
+
+  // Solicitação guarda só rótulos (de/para), não ids de opção — casa pelo
+  // nome da opção do catálogo. Sem match (ex.: material próprio, item
+  // paramétrico) o bloco "Como fica" simplesmente não aparece.
+  const ambienteDoItem = vinculo ? catalogo.getAmbientes(vinculo.id).find((a) => a.itens.some((i) => i.id === solicitacao.itemId)) : undefined;
+  const itemDaSolicitacao = ambienteDoItem?.itens.find((i) => i.id === solicitacao.itemId);
+  const casa = (rotulo: string) => itemDaSolicitacao?.opcoes.find((o) => o.nome === rotulo || o.nome.includes(rotulo) || rotulo.includes(o.nome));
+  const opcaoPara = itemDaSolicitacao ? casa(solicitacao.para) : undefined;
+  const opcaoDe = itemDaSolicitacao ? (casa(solicitacao.de) ?? itemDaSolicitacao.opcoes.find((o) => o.padrao)) : undefined;
 
   return (
     <div className="container container--narrow">
@@ -51,6 +61,19 @@ export function PersonalizacaoDetalhePage() {
           {solicitacao.responsavel && <div style={{ fontSize: 13 }}>Analisando: <strong>{solicitacao.responsavel}</strong></div>}
         </div>
       </div>
+
+      {vinculo && ambienteDoItem && itemDaSolicitacao && opcaoPara && (
+        <div style={{ marginBottom: 24 }}>
+          <PreviewAlteracao
+            vinculo={vinculo}
+            ambiente={ambienteDoItem}
+            item={itemDaSolicitacao}
+            escolhasBase={activeVinculo?.id === vinculo.id ? vinculoChoices : {}}
+            de={opcaoDe}
+            para={opcaoPara}
+          />
+        </div>
+      )}
 
       <div className="card" style={{ marginBottom: 24 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-soft)", textTransform: "uppercase", marginBottom: 14 }}>Linha do tempo</div>

@@ -744,9 +744,9 @@ function vinculosMateriaisSeed(cid: string): Record<string, Record<string, Recor
     cozinha: { bancada: { b1: materialSeedId(cid, "Bancada", 2), b2: materialSeedId(cid, "Bancada", 1), b3: materialSeedId(cid, "Bancada", 6) } },
     banheiro: {
       piso_banheiro: { psb1: materialSeedId(cid, "Piso", 7), psb2: materialSeedId(cid, "Piso", 9) },
-      revestimento: { rv2: materialSeedId(cid, "Revestimento", 9) },
+      revestimento: { rv2: materialSeedId(cid, "Revestimento", 2) },
     },
-    varanda: { piso_varanda: { pv1: materialSeedId(cid, "Piso", 7), pv2: materialSeedId(cid, "Piso", 5) } },
+    varanda: { piso_varanda: { pv1: materialSeedId(cid, "Piso", 2), pv2: materialSeedId(cid, "Piso", 5) } },
   };
 }
 
@@ -1194,6 +1194,15 @@ const MATERIAIS_POR_CATEGORIA = 30;
 // foto estável (nunca quebra) por nome de modelo, sem precisar curar 1620
 // fotos reais (18 categorias × 30 × 3 construtoras) num seed de protótipo
 // — não é foto real do produto.
+// Piso, Revestimento e Bancada têm foto real (texturas CC0 do ambientCG em
+// public/materiais/<categoria>/NN.jpg, ver CREDITOS.txt) — são as 3
+// categorias que o configurador 3D e o AR usam como superfície. As demais
+// categorias (louças, portas, eletros…) seguem com a foto de placeholder.
+const CATEGORIAS_COM_TEXTURA: Record<string, string> = { Piso: "piso", Revestimento: "revestimento", Bancada: "bancada" };
+const texturaDaVariante = (categoria: string, varianteIdx: number): string | undefined => {
+  const pasta = CATEGORIAS_COM_TEXTURA[categoria];
+  return pasta ? asset(`materiais/${pasta}/${String(varianteIdx + 1).padStart(2, "0")}.jpg`) : undefined;
+};
 const imagemDoModelo = (modelo: string): string => `https://picsum.photos/seed/${encodeURIComponent(modelo)}/200/150`;
 
 function gerarMateriaisDaConstrutora(construtoraId: string): MaterialCatalogItem[] {
@@ -1217,7 +1226,7 @@ function gerarMateriaisDaConstrutora(construtoraId: string): MaterialCatalogItem
         fornecedorId: fornecedor.id,
         modelo,
         sku: `${marca.slice(0, 3).toUpperCase()}-${catAbrev}-${String(seq).padStart(4, "0")}`,
-        imagemUrl: imagemDoModelo(modelo),
+        imagemUrl: texturaDaVariante(ref.categoria, i % ref.variantes.length) ?? imagemDoModelo(modelo),
       });
     }
   }
