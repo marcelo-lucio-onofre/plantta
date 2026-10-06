@@ -5,10 +5,12 @@ import { Breadcrumb } from "../components/Breadcrumb";
 import { JanelaBadge, NivelBadge, PrazoBadge } from "../components/Badge";
 import { ConstrutoraGroupHeader } from "../components/ConstrutoraGroupHeader";
 import { ImageThumb } from "../components/ImageThumb";
+import { PreviewAlteracao } from "../components/PreviewAlteracao";
 import { MoedaInput } from "../components/MaskedInput";
 import { avaliarOpcao, avaliarParametrico, calcularJanelaPersonalizacao, fmtBRL, fmtSigned, saldoAllowanceGroup } from "../domain/calculations";
 import { useApp } from "../state/AppContext";
 import type { Brand, Vinculo } from "../domain/types";
+
 
 const STEPS = [
   { label: "Empreendimento", icon: Building2 },
@@ -386,6 +388,12 @@ export function NovaPersonalizacaoPage() {
                     })}
                   </>
                 )}
+                {vinculo && ambiente && (() => {
+                  const paraOpt = item.opcoes.find((o) => o.id === opcaoId);
+                  return paraOpt && paraOpt.id !== atualOpt?.id ? (
+                    <PreviewAlteracao vinculo={vinculo} ambiente={ambiente} item={item} escolhasBase={vinculoChoices} de={atualOpt} para={paraOpt} />
+                  ) : null;
+                })()}
               </div>
             );
           })()}

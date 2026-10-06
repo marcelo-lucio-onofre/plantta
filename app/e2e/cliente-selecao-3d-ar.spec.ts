@@ -37,7 +37,7 @@ test.describe("Cliente — Seleção com preview 3D e AR", () => {
     await expect(page.getByText(/Revestimento:/)).toHaveCount(0);
 
     await page.click('button:has-text("Porcelanato Off-White Grande Formato")');
-    await expect(page.getByText(/Revestimento: Grande Formato Cimentício 90×90/)).toBeVisible();
+    await expect(page.getByText(/Revestimento: Acetinado Branco 30×60/)).toBeVisible();
   });
 
   test("ambiente com bancada (cozinha) usa a geometria real da planta", async ({ page }) => {
