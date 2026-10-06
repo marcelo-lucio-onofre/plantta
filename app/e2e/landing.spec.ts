@@ -5,9 +5,9 @@ test.describe("Landing pública", () => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: /A construtora monta o catálogo/ })).toBeVisible();
 
-    await expect(page.getByRole("link", { name: "Entrar · Cliente" })).toHaveAttribute("href", "/login/cliente");
-    await expect(page.getByRole("link", { name: "Entrar · Construtora" })).toHaveAttribute("href", "/login/construtora");
-    await expect(page.getByRole("link", { name: "Portal com marca da construtora" })).toHaveAttribute("href", "/login/cliente/marca");
+    await expect(page.getByRole("link", { name: "Portal do cliente" })).toHaveAttribute("href", "/login/cliente");
+    await expect(page.getByRole("link", { name: "Entrar", exact: true })).toHaveAttribute("href", "/login/construtora");
+    await expect(page.getByRole("link", { name: "Portal com marca da construtora" })).toHaveAttribute("href", "/login/marca/engemax");
   });
 
   test("CTAs do corpo navegam pros logins", async ({ page }) => {
@@ -16,8 +16,8 @@ test.describe("Landing pública", () => {
     await page.waitForURL("**/login/construtora");
 
     await page.goBack();
-    await page.click('button:has-text("Ver o fluxo completo")');
-    await page.waitForURL("**/login/cliente");
+    await page.click('button:has-text("Começar agora")');
+    await page.waitForURL("**/login/construtora");
   });
 
   test("rota desconhecida cai de volta pra landing", async ({ page }) => {

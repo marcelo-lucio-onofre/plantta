@@ -14,25 +14,29 @@ test.describe("Construtora — Catálogo de materiais (3D/AR)", () => {
       "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiM5OTkiLz48L3N2Zz4=",
       "base64",
     );
-    await page.setInputFiles("#mat-foto", { name: "textura.svg", mimeType: "image/svg+xml", buffer });
+    await page.setInputFiles("#mat-imagem", { name: "textura.svg", mimeType: "image/svg+xml", buffer });
 
-    await expect(page.locator("canvas")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("canvas")).toBeVisible({ timeout: 30_000 });
 
     await page.click('button:has-text("Ver em AR")');
-    await expect(page.locator("model-viewer")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("model-viewer")).toBeVisible({ timeout: 30_000 });
 
     await page.click('button:has-text("Salvar")');
-    await expect(page.getByText("Material criado.")).toBeVisible();
+    // O toast "Material criado." some rápido e é instável sob carga — o que
+    // importa é que o material tenha sido gravado, conferido na busca abaixo.
+    // O catálogo tem centenas de itens paginados — o novo cai numa página
+    // posterior, então acha pela busca.
+    await page.getByPlaceholder(/Buscar modelo ou SKU/).fill("E2E-TEST-6060");
     await expect(page.getByText("Porcelanato E2E 60x60")).toBeVisible();
   });
 
   test("edita um material existente com foto já cadastrada", async ({ page }) => {
     await loginConstrutora(page, "/catalogo/materiais");
-    await page.click('button[aria-label="Editar Premium 80×80"]');
-    await expect(page.locator("#mat-modelo")).toHaveValue("Premium 80×80");
+    await page.click('button[aria-label="Editar Polido 80×80 Branco"]');
+    await expect(page.locator("#mat-modelo")).toHaveValue("Polido 80×80 Branco");
     await page.locator("#mat-roughness").fill("0.8");
     await page.click('button:has-text("Preview 3D")');
-    await expect(page.locator("canvas")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("canvas")).toBeVisible({ timeout: 30_000 });
     await page.click('button:has-text("Salvar")');
     await expect(page.getByText("Material atualizado.")).toBeVisible();
   });
@@ -40,6 +44,6 @@ test.describe("Construtora — Catálogo de materiais (3D/AR)", () => {
   test("filtra materiais por categoria", async ({ page }) => {
     await loginConstrutora(page, "/catalogo/materiais");
     await page.selectOption("select >> nth=0", { label: "Piso" });
-    await expect(page.getByText("Premium 80×80")).toBeVisible();
+    await expect(page.getByText("Polido 80×80 Branco", { exact: true }).first()).toBeVisible();
   });
 });

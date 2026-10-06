@@ -58,12 +58,14 @@ test.describe("Cliente — Nova personalização (wizard)", () => {
     const fornecedorInputs = page.locator('input[placeholder="Nome do fornecedor"]');
     await fornecedorInputs.nth(0).fill("Fornecedor A");
     await fornecedorInputs.nth(1).fill("Fornecedor B");
-    const valorInputs = page.locator('input[placeholder="R$"]');
+    const valorInputs = page.locator('input[placeholder="R$ 0,00"]');
     await valorInputs.nth(0).fill("9000");
     await valorInputs.nth(1).fill("9500");
     await page.check('input[type="checkbox"]');
 
     await page.click('button:has-text("Enviar para análise")');
-    await expect(page.getByText("Enviado para análise ✓")).toBeVisible();
+    // Depois do envio o cliente cai no detalhe da solicitação criada.
+    await page.waitForURL(/\/personalizacoes\/SOL-/);
+    await expect(page.getByText("Material próprio: Porcelanato XYZ 90x90").first()).toBeVisible();
   });
 });
