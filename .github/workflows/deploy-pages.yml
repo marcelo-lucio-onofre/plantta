@@ -34,7 +34,14 @@ jobs:
         run: npm run build
         env:
           GITHUB_PAGES: "true"
+      # `enablement: true` faz essa action criar o "site" de Pages do repo
+      # sozinha (via API) se ele ainda não existir — sem isso, ela só lê a
+      # configuração existente e falha com 404 mesmo depois de marcar
+      # Settings → Pages → Source: GitHub Actions na UI, porque esse toggle
+      # sozinho não cria o site enquanto nenhum deploy nunca rodou.
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: app/dist
