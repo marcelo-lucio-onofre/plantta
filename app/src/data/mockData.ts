@@ -18,6 +18,8 @@ import type {
   TipoPapel,
   Vinculo,
 } from "../domain/types";
+
+const asset = (p: string) => `${import.meta.env.BASE_URL}${p}`;
 import { plantaKey } from "../domain/calculations";
 import { AMBIENTES_SUGERIDOS, CATEGORIAS_MATERIAL, MARCAS_SUGERIDAS } from "../domain/catalogoReferencia";
 import { parseDxfAmbientes } from "../lib/dxfPlanta";
@@ -87,7 +89,7 @@ export const initialBrand: Brand = {
   color: "#fd3541",
   logo: "https://alliance.com.br/wp-content/uploads/2026/01/logo-alliance-ok.png",
   background: "https://alliance.com.br/wp-content/uploads/2025/11/Copia-de-Guarita-1.jpg",
-  favicon: "/brand/alliance-favicon.jpg",
+  favicon: asset("brand/alliance-favicon.jpg"),
 };
 
 // Prado's own brand — this construtora ("00001") is now Engemax.
@@ -95,9 +97,9 @@ export const engemaxBrand: Brand = {
   nome: "Engemax",
   slug: "engemax",
   color: "#35492e",
-  logo: "/brand/engemax-logo.png",
-  background: "/brand/engemax-background.jpg",
-  favicon: "/brand/engemax-logo.jpg",
+  logo: asset("brand/engemax-logo.png"),
+  background: asset("brand/engemax-background.jpg"),
+  favicon: asset("brand/engemax-logo.jpg"),
 };
 
 // plantta's own brand — used everywhere the client portal is NOT
@@ -132,7 +134,7 @@ export const empreendimento: Empreendimento = {
   cpf: "•••.•••.•••-89",
   totalUnidades: 300,
   valorImovel: 850000,
-  imagemUrl: "/empreendimentos/canoa.jpg",
+  imagemUrl: asset("empreendimentos/canoa.jpg"),
 };
 
 // Second empreendimento for the same client, at a different construtora —
@@ -174,7 +176,7 @@ export const empreendimentoAuroraSemAlteracao: Empreendimento = {
   cpf: "•••.•••.•••-89",
   totalUnidades: 300,
   valorImovel: 780000,
-  imagemUrl: "/empreendimentos/canoa.jpg",
+  imagemUrl: asset("empreendimentos/canoa.jpg"),
 };
 
 // Segundo empreendimento da Engemax — cobre um cliente com dois
@@ -189,7 +191,7 @@ export const empreendimentoJangada: Empreendimento = {
   cpf: "•••.•••.•••-89",
   totalUnidades: 120,
   valorImovel: 690000,
-  imagemUrl: "/empreendimentos/jangada.jpg",
+  imagemUrl: asset("empreendimentos/jangada.jpg"),
 };
 
 // A third construtora — Alliance itself (its real brand, not a demo
