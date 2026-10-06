@@ -19,6 +19,7 @@ import type {
   Planta,
   Solicitacao,
   StatusSolicitacao,
+  TipoAmbiente,
   UnidadeAssociada,
   Vinculo,
 } from "../../domain/types";
@@ -51,6 +52,12 @@ export interface ICatalogoRepository {
    * listEmpreendimentosByConstrutora / show up in Catálogo, ready to build
    * on — otherwise a Cadastro just vanishes into a list nothing else reads. */
   registrarEmpreendimento(empreendimentoId: string, construtoraId: string, nome: string): void;
+  /** Ponte entre uma UnidadeAssociada (vendida via Vendas) e o vínculo que
+   * o wizard de personalização (getEmpreendimento(vinculoId)) precisa —
+   * sem isso, um vínculo criado dinamicamente (ver AppContext.
+   * garantirVinculoDaUnidade) não teria de onde puxar nome/comprador/valor
+   * pro resumo "Minha unidade" nem pra criação de Solicitacao. */
+  registrarEmpreendimentoPorVinculo(vinculoId: string, dados: Empreendimento): void;
 }
 
 export interface IMaterialCatalogoRepository {
@@ -71,6 +78,13 @@ export interface IMarcaRepository {
   list(construtoraId: string): Marca[];
   create(input: Omit<Marca, "id">): Marca;
   update(id: string, patch: Partial<Omit<Marca, "id" | "construtoraId">>): Marca | undefined;
+  remove(id: string): void;
+}
+
+export interface IAmbienteRepository {
+  list(construtoraId: string): TipoAmbiente[];
+  create(input: Omit<TipoAmbiente, "id">): TipoAmbiente;
+  update(id: string, patch: Partial<Omit<TipoAmbiente, "id" | "construtoraId">>): TipoAmbiente | undefined;
   remove(id: string): void;
 }
 
@@ -100,6 +114,10 @@ export interface IVinculoRepository {
   /** The logged-in client's own units, across every construtora they bought from. */
   listForCliente(): Vinculo[];
   getById(id: string): Vinculo | undefined;
+  /** Cria ou atualiza um vínculo por id — usado pra gerar o vínculo de uma
+   * unidade vendida sob demanda (ver AppContext.garantirVinculoDaUnidade),
+   * não só pelos vínculos-demo pré-carregados. */
+  upsert(vinculo: Vinculo): void;
 }
 
 export interface IBrandRepository {
@@ -107,6 +125,9 @@ export interface IBrandRepository {
    * client portal falls back to plantta's own brand in that case. */
   getBrand(construtoraId: string): Brand | null;
   saveBrand(construtoraId: string, brand: Brand): Brand;
+  /** Resolve o slug da URL de login white-label (`/login/marca/:slug`)
+   * pra qual construtora ele pertence. null se nenhuma marca usa esse slug. */
+  getConstrutoraIdBySlug(slug: string): string | null;
 }
 
 export interface IContatoConstrutoraRepository {
@@ -127,6 +148,7 @@ export interface NovaSolicitacaoInput {
   para: string;
   diferenca: number | null;
   nivel: Solicitacao["nivel"];
+  materialProprio?: Solicitacao["materialProprio"];
 }
 
 export interface ISolicitacaoRepository {
@@ -135,6 +157,11 @@ export interface ISolicitacaoRepository {
   getById(id: string): Solicitacao | undefined;
   create(input: NovaSolicitacaoInput): Solicitacao;
   updateStatus(id: string, status: StatusSolicitacao, responsavel?: string | null): Solicitacao | undefined;
+  /** Técnico decide o valor final (proposta de fornecedor escolhida) e os
+   * custos extras (mão de obra, material de instalação etc.) de um
+   * material próprio — chamado antes de `updateStatus(id, "aprovado")`
+   * pra `diferenca` já estar correta quando a aprovação entra na timeline. */
+  registrarCustosExtras(id: string, valorMaterialEscolhido: number, custosExtras: Solicitacao["custosExtras"]): Solicitacao | undefined;
 }
 
 export interface IEmpreendimentoCadastroRepository {

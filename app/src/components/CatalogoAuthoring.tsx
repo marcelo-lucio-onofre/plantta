@@ -1,42 +1,35 @@
 import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Plus, Trash2 } from "lucide-react";
 import { ArtBadge, NivelBadge } from "./Badge";
-import { SugestaoInput } from "./SugestaoInput";
+import { ImageThumb } from "./ImageThumb";
 import { Modal } from "./Modal";
 import { FormField } from "./FormField";
+import { MoedaInput } from "./MaskedInput";
 import { useToast } from "./Toast";
 import { deInputDate, numeroUnidade, paraInputDate } from "../domain/calculations";
-import { AMBIENTES_SUGERIDOS } from "../domain/catalogoReferencia";
-import type { AllowanceGroup, Ambiente, CategoriaArquivoPlanta, Item, MaterialCatalogItem, NivelAprovacao, Opcao, Planta, StatusPlanta, Torre, UnidadeAssociada } from "../domain/types";
+import type { AllowanceGroup, Ambiente, Categoria, CategoriaArquivoPlanta, Item, MaterialCatalogItem, NivelAprovacao, Opcao, Planta, Torre, UnidadeAssociada } from "../domain/types";
 import { useApp } from "../state/AppContext";
 
 export const gerarId = (prefixo: string) => `${prefixo}-${Date.now()}-${Math.round(Math.random() * 10000)}`;
 
-/** Combina o que já está em uso (prioridade — mantém a grafia real do
- * construtora) com a lista de sugestão, sem duplicar por caixa/espaço. */
-function dedupeCi(...listas: readonly (readonly string[])[]): string[] {
-  const vistos = new Set<string>();
-  const out: string[] = [];
-  for (const lista of listas) {
-    for (const v of lista) {
-      const t = v.trim();
-      if (!t || vistos.has(t.toLowerCase())) continue;
-      vistos.add(t.toLowerCase());
-      out.push(t);
-    }
-  }
-  return out;
-}
-
-function OpcaoRow({ opcao, onChange, onRemove }: { opcao: Opcao; onChange: (patch: Partial<Opcao>) => void; onRemove: () => void }) {
+function OpcaoRow({
+  opcao,
+  imagemUrl,
+  onChange,
+  onRemove,
+}: {
+  opcao: Opcao;
+  imagemUrl?: string | null;
+  onChange: (patch: Partial<Opcao>) => void;
+  onRemove: () => void;
+}) {
   return (
     <div style={{ padding: "8px 0", borderTop: "1px solid var(--rule)" }}>
       <div className="row gap-sm" style={{ alignItems: "center", marginBottom: opcao.materialCatalogItemId ? 4 : 0 }}>
+        {opcao.materialCatalogItemId && <ImageThumb url={imagemUrl} alt={opcao.nome} size={28} />}
         <input className="input" style={{ flex: "2 1 160px" }} value={opcao.nome} onChange={(e) => onChange({ nome: e.target.value })} placeholder="Nome da opção" />
-        <input className="input" style={{ flex: "1 1 100px" }} type="number" min={0} value={opcao.preco} onChange={(e) => onChange({ preco: Number(e.target.value) })} />
-        <label className="row gap-xs" style={{ fontSize: 12, flexShrink: 0 }}>
-          <input type="checkbox" checked={Boolean(opcao.padrao)} onChange={(e) => onChange({ padrao: e.target.checked })} /> Padrão
-        </label>
+        <MoedaInput style={{ flex: "1 1 100px" }} value={opcao.preco} onChange={(n) => onChange({ preco: n })} />
         <label className="row gap-xs" style={{ fontSize: 12, flexShrink: 0 }}>
           <input type="checkbox" checked={Boolean(opcao.remocao)} onChange={(e) => onChange({ remocao: e.target.checked })} /> Remoção
         </label>
@@ -46,7 +39,7 @@ function OpcaoRow({ opcao, onChange, onRemove }: { opcao: Opcao; onChange: (patc
       </div>
       {opcao.materialCatalogItemId && (
         <div style={{ fontSize: 11, color: "var(--ink-soft)" }}>
-          Vinculado à biblioteca — o preço acima é só deste item e pode ser diferente do preço padrão do material na biblioteca.
+          Vinculado a um material — o preço acima é só deste item e pode ser diferente do preço padrão do material no catálogo.
         </div>
       )}
     </div>
@@ -60,31 +53,37 @@ export type MaterialResolvido = MaterialCatalogItem & { marcaNome: string; categ
 
 interface ItemRowProps {
   item: Item;
-  grupos: AllowanceGroup[];
+  categorias: Categoria[];
   materiais: MaterialResolvido[];
   onChange: (patch: Partial<Item>) => void;
   onRemove: () => void;
   onOpcoesChange: (updater: (opcoes: Opcao[]) => Opcao[]) => void;
-  onAtribuirGrupo: (groupId: string) => void;
 }
 
-function ItemRow({ item, grupos, materiais, onChange, onRemove, onOpcoesChange, onAtribuirGrupo }: ItemRowProps) {
-  const [materialParaAnexar, setMaterialParaAnexar] = useState("");
+function ItemRow({ item, categorias, materiais, onChange, onRemove, onOpcoesChange }: ItemRowProps) {
+  const [materialParaAdicionar, setMaterialParaAdicionar] = useState("");
+  const materiaisDaCategoria = item.categoriaId ? materiais.filter((m) => m.categoriaId === item.categoriaId) : [];
 
-  function anexarOpcaoDaBiblioteca() {
-    const material = materiais.find((m) => m.id === materialParaAnexar);
+  function adicionarMaterial() {
+    const material = materiaisDaCategoria.find((m) => m.id === materialParaAdicionar);
     if (!material) return;
     onOpcoesChange((opcoes) => [
       ...opcoes,
       { id: gerarId("op"), nome: `${material.marcaNome} ${material.modelo}`, preco: 0, materialCatalogItemId: material.id },
     ]);
-    setMaterialParaAnexar("");
+    setMaterialParaAdicionar("");
   }
 
   return (
     <div style={{ border: "1px solid var(--rule)", borderRadius: 8, padding: 14, background: "var(--paper)" }}>
       <div className="row gap-sm" style={{ alignItems: "flex-start", marginBottom: 10, flexWrap: "wrap" }}>
         <input className="input" style={{ flex: "1 1 200px" }} value={item.nome} onChange={(e) => onChange({ nome: e.target.value })} placeholder="Nome do item" />
+        <select className="input" style={{ flex: "1 1 160px" }} value={item.categoriaId ?? ""} onChange={(e) => onChange({ categoriaId: e.target.value || undefined })}>
+          <option value="">Categoria de material...</option>
+          {categorias.map((c) => (
+            <option key={c.id} value={c.id}>{c.nome}</option>
+          ))}
+        </select>
         <NivelBadge nivel={item.nivel} />
         <ArtBadge requerArt={item.requerArt} />
         <button type="button" style={{ border: "none", background: "none", color: "var(--red-ink)", cursor: "pointer", padding: 4 }} onClick={onRemove} aria-label="Remover item">
@@ -95,11 +94,17 @@ function ItemRow({ item, grupos, materiais, onChange, onRemove, onOpcoesChange, 
       <div className="grid grid-2" style={{ gap: 8, marginBottom: 10 }}>
         <div>
           <label className="label">Especificação padrão</label>
-          <input className="input" value={item.padrao} onChange={(e) => onChange({ padrao: e.target.value })} placeholder="Porcelanato Standard 60×60" />
+          <select className="input" value={item.padrao} disabled={materiaisDaCategoria.length === 0} onChange={(e) => onChange({ padrao: e.target.value })}>
+            <option value="">{item.categoriaId ? "Selecione o material..." : "Escolha a categoria acima primeiro"}</option>
+            {materiaisDaCategoria.map((m) => {
+              const label = `${m.marcaNome} ${m.modelo}`;
+              return <option key={m.id} value={label}>{label}</option>;
+            })}
+          </select>
         </div>
         <div>
           <label className="label">Preço base / verba (R$)</label>
-          <input className="input" type="number" min={0} value={item.valorPadrao} onChange={(e) => onChange({ valorPadrao: Number(e.target.value) })} />
+          <MoedaInput value={item.valorPadrao} onChange={(n) => onChange({ valorPadrao: n })} />
         </div>
         <div>
           <label className="label">Nível de aprovação</label>
@@ -117,13 +122,7 @@ function ItemRow({ item, grupos, materiais, onChange, onRemove, onOpcoesChange, 
         {item.requerArt && (
           <div>
             <label className="label">Taxa de ART (R$) — cobrada do cliente</label>
-            <input
-              className="input"
-              type="number"
-              min={0}
-              value={item.custoArt ?? 0}
-              onChange={(e) => onChange({ custoArt: Number(e.target.value) })}
-            />
+            <MoedaInput value={item.custoArt ?? 0} onChange={(n) => onChange({ custoArt: n })} />
           </div>
         )}
         <div>
@@ -152,15 +151,6 @@ function ItemRow({ item, grupos, materiais, onChange, onRemove, onOpcoesChange, 
           <label className="label">Necessário em obra</label>
           <input className="input" type="date" value={item.necessarioEmObra ?? ""} onChange={(e) => onChange({ necessarioEmObra: e.target.value || undefined })} />
         </div>
-        <div style={{ gridColumn: "1 / -1" }}>
-          <label className="label">Grupo de verba compartilhada</label>
-          <select className="input" value={item.allowanceGroupId ?? ""} onChange={(e) => onAtribuirGrupo(e.target.value)}>
-            <option value="">Nenhum — verba própria do item</option>
-            {grupos.map((g) => (
-              <option key={g.id} value={g.id}>{g.nome}</option>
-            ))}
-          </select>
-        </div>
       </div>
 
       {item.nivel === 3 && (
@@ -178,13 +168,7 @@ function ItemRow({ item, grupos, materiais, onChange, onRemove, onOpcoesChange, 
           </div>
           <div>
             <label className="label">Custo por unidade extra (R$)</label>
-            <input
-              className="input"
-              type="number"
-              min={0}
-              value={item.custoPorUnidade?.total ?? 0}
-              onChange={(e) => onChange({ custoPorUnidade: { ...item.custoPorUnidade, total: Number(e.target.value) } })}
-            />
+            <MoedaInput value={item.custoPorUnidade?.total ?? 0} onChange={(n) => onChange({ custoPorUnidade: { ...item.custoPorUnidade, total: n } })} />
           </div>
         </div>
       ) : (
@@ -194,26 +178,36 @@ function ItemRow({ item, grupos, materiais, onChange, onRemove, onOpcoesChange, 
             <OpcaoRow
               key={opt.id}
               opcao={opt}
+              imagemUrl={materiais.find((m) => m.id === opt.materialCatalogItemId)?.imagemUrl}
               onChange={(patch) => onOpcoesChange((opcoes) => opcoes.map((o) => (o.id === opt.id ? { ...o, ...patch } : o)))}
               onRemove={() => onOpcoesChange((opcoes) => opcoes.filter((o) => o.id !== opt.id))}
             />
           ))}
           <div className="row gap-sm" style={{ marginTop: 10, flexWrap: "wrap" }}>
-            <button type="button" className="btn btn--sm" onClick={() => onOpcoesChange((opcoes) => [...opcoes, { id: gerarId("op"), nome: "Nova opção", preco: 0 }])}>
-              <Plus className="sidebar-nav-icon" /> Opção em branco
-            </button>
-            {materiais.length > 0 && (
+            {materiaisDaCategoria.length > 0 ? (
               <div className="row gap-xs" style={{ alignItems: "center" }}>
-                <select className="input" style={{ width: 200 }} value={materialParaAnexar} onChange={(e) => setMaterialParaAnexar(e.target.value)}>
-                  <option value="">Anexar da biblioteca...</option>
-                  {materiais.map((m) => (
-                    <option key={m.id} value={m.id}>{m.categoriaNome} · {m.marcaNome} {m.modelo}</option>
+                <select className="input" style={{ width: 220 }} value={materialParaAdicionar} onChange={(e) => setMaterialParaAdicionar(e.target.value)}>
+                  <option value="">Adicionar material...</option>
+                  {materiaisDaCategoria.map((m) => (
+                    <option key={m.id} value={m.id}>{m.marcaNome} {m.modelo}</option>
                   ))}
                 </select>
-                <button type="button" className="btn btn--sm" disabled={!materialParaAnexar} onClick={anexarOpcaoDaBiblioteca}>Anexar</button>
+                <button type="button" className="btn btn--sm" disabled={!materialParaAdicionar} onClick={adicionarMaterial}>Adicionar</button>
               </div>
+            ) : item.categoriaId ? (
+              <span className="text-soft" style={{ fontSize: 12 }}>Nenhum material cadastrado nessa categoria ainda.</span>
+            ) : (
+              <span className="text-soft" style={{ fontSize: 12 }}>Escolha a categoria acima pra adicionar um material.</span>
             )}
           </div>
+          <label className="row gap-xs" style={{ fontSize: 12.5, alignItems: "center", marginTop: 10 }}>
+            <input
+              type="checkbox"
+              checked={item.permiteMaterialProprio ?? true}
+              onChange={(e) => onChange({ permiteMaterialProprio: e.target.checked })}
+            />
+            Cliente pode enviar material próprio pra análise
+          </label>
         </div>
       )}
     </div>
@@ -266,13 +260,181 @@ export function UploadCompactRow({ label, accept, arquivos, onAdd, onClear }: { 
 }
 
 /**
- * CRUD de plantas (tipologias de unidade) de um empreendimento — usado
- * tanto no wizard de Cadastro (passo "Plantas e unidades") quanto em
- * CatalogoPage (pra trocar de planta antes de editar o catálogo dela).
- * Card não-selecionado mostra resumo compacto; o formulário completo
- * (características, versão, personalização, uploads) só aparece pra
- * planta selecionada — com 10 categorias de upload por planta, mostrar
- * tudo expandido pra toda planta ao mesmo tempo vira parede de campo.
+ * Upload dos arquivos de uma planta — uma área de arraste-e-solte só, com
+ * o tipo escolhido num select ao lado (em vez de 10 linhas sempre visíveis,
+ * uma por categoria). Seleção múltipla de arquivo é nativa do input; lista
+ * abaixo só mostra categorias que já têm arquivo, pra não virar parede de
+ * campo vazio.
+ */
+function PlantaUploadsManager({ empreendimentoId, planta }: { empreendimentoId: string; planta: Planta }) {
+  const { salvarPlanta } = useApp();
+  const [tipo, setTipo] = useState<CategoriaArquivoPlanta>(META_ARQUIVOS_PLANTA[0].key);
+  const [arrastando, setArrastando] = useState(false);
+  const metaAtual = META_ARQUIVOS_PLANTA.find((m) => m.key === tipo)!;
+  const totalArquivos = META_ARQUIVOS_PLANTA.reduce((n, m) => n + planta.arquivos[m.key].length, 0);
+
+  function adicionar(list: FileList | null) {
+    if (!list?.length) return;
+    const incoming = Array.from(list).map((f) => ({ id: `${tipo}-${Date.now()}-${f.name}`, name: f.name, size: f.size }));
+    salvarPlanta(empreendimentoId, { ...planta, arquivos: { ...planta.arquivos, [tipo]: [...planta.arquivos[tipo], ...incoming] } });
+  }
+  function remover(key: CategoriaArquivoPlanta, id: string) {
+    salvarPlanta(empreendimentoId, { ...planta, arquivos: { ...planta.arquivos, [key]: planta.arquivos[key].filter((a) => a.id !== id) } });
+  }
+
+  return (
+    <div>
+      <div className="row" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <label className="label" style={{ margin: 0 }}>Uploads</label>
+        {totalArquivos > 0 && <span className="text-soft" style={{ fontSize: 12 }}>{totalArquivos} arquivo{totalArquivos === 1 ? "" : "s"}</span>}
+      </div>
+
+      <select className="input" style={{ marginBottom: 10, maxWidth: 320 }} value={tipo} onChange={(e) => setTipo(e.target.value as CategoriaArquivoPlanta)}>
+        {META_ARQUIVOS_PLANTA.map((m) => (
+          <option key={m.key} value={m.key}>{m.label}{planta.arquivos[m.key].length ? ` (${planta.arquivos[m.key].length})` : ""}</option>
+        ))}
+      </select>
+
+      <label
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 4,
+          border: `2px dashed ${arrastando ? "var(--brand)" : "var(--rule-strong)"}`,
+          borderRadius: 10,
+          padding: "22px 16px",
+          cursor: "pointer",
+          background: arrastando ? "var(--green-bg)" : "var(--paper)",
+          textAlign: "center",
+        }}
+        onDragOver={(e) => { e.preventDefault(); setArrastando(true); }}
+        onDragLeave={() => setArrastando(false)}
+        onDrop={(e) => { e.preventDefault(); setArrastando(false); adicionar(e.dataTransfer.files); }}
+      >
+        <span style={{ fontSize: 13, fontWeight: 600 }}>Arraste arquivos aqui ou clique pra selecionar</span>
+        <span className="text-soft" style={{ fontSize: 11.5 }}>Tipo selecionado: {metaAtual.label} · aceita vários arquivos de uma vez</span>
+        <input type="file" multiple accept={metaAtual.accept} onChange={(e) => adicionar(e.target.files)} style={{ display: "none" }} />
+      </label>
+
+      {totalArquivos > 0 && (
+        <div className="stack gap-sm" style={{ marginTop: 12 }}>
+          {META_ARQUIVOS_PLANTA.filter((m) => planta.arquivos[m.key].length > 0).map((m) => (
+            <div key={m.key}>
+              <div className="text-soft" style={{ fontSize: 11, fontWeight: 600, marginBottom: 4 }}>{m.label}</div>
+              <div className="stack gap-xs">
+                {planta.arquivos[m.key].map((f) => (
+                  <div key={f.id} className="row" style={{ justifyContent: "space-between", alignItems: "center", border: "1px solid var(--rule)", borderRadius: 6, padding: "5px 9px", fontSize: 12 }}>
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</span>
+                    <button
+                      type="button"
+                      style={{ border: "none", background: "none", color: "var(--red-ink)", cursor: "pointer", fontWeight: 700, fontSize: 13, padding: 0 }}
+                      onClick={() => remover(m.key, f.id)}
+                      aria-label={`Remover ${f.name}`}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * CRUD de ambientes (Sala, Cozinha, Suíte...) de uma planta — vive dentro
+ * do card da própria planta porque uma planta tem vários ambientes, não
+ * faz sentido cadastrá-los num passo separado do wizard. Persiste direto
+ * no repositório a cada mudança (sem buffer/"salvar"): é só a lista, e ela
+ * precisa refletir na aba Catálogo assim que muda, já que lá o item/opção
+ * de cada ambiente é montado em cima dessa mesma lista (ver
+ * CatalogoPlantaEditor). Grupo de verba ligado a um ambiente removido é
+ * limpo junto, senão fica orfão.
+ *
+ * Nome vem sempre de `/catalogo/ambientes` (combo, não texto livre) —
+ * mesma taxonomia fechada de Categoria/Marca (design.md §5).
+ */
+export function AmbientesManager({ empreendimentoId, plantaId }: { empreendimentoId: string; plantaId: string }) {
+  const { catalogo, salvarCatalogo, catalogoAmbientes, construtoraLogadaId } = useApp();
+  const construtoraId = construtoraLogadaId ?? "";
+  const ambientes = catalogo.getAmbientesByPlanta(empreendimentoId, plantaId);
+  const tipos = catalogoAmbientes.list(construtoraId);
+  const [novoTipoId, setNovoTipoId] = useState(tipos[0]?.id ?? "");
+
+  function addAmbiente() {
+    const tipo = tipos.find((t) => t.id === novoTipoId);
+    if (!tipo) return;
+    const grupos = catalogo.getAllowanceGroupsByPlanta(empreendimentoId, plantaId);
+    salvarCatalogo(empreendimentoId, plantaId, [...ambientes, { id: gerarId("amb"), nome: tipo.nome, itens: [] }], grupos);
+  }
+  function renomearAmbiente(ambienteId: string, nome: string) {
+    const grupos = catalogo.getAllowanceGroupsByPlanta(empreendimentoId, plantaId);
+    salvarCatalogo(empreendimentoId, plantaId, ambientes.map((a) => (a.id === ambienteId ? { ...a, nome } : a)), grupos);
+  }
+  function removeAmbiente(ambienteId: string) {
+    const grupos = catalogo.getAllowanceGroupsByPlanta(empreendimentoId, plantaId).filter((g) => g.ambienteId !== ambienteId);
+    salvarCatalogo(empreendimentoId, plantaId, ambientes.filter((a) => a.id !== ambienteId), grupos);
+  }
+
+  return (
+    <div>
+      <div className="stack gap-xs" style={{ marginBottom: 8 }}>
+        <label className="label" style={{ margin: 0 }}>Ambientes desta planta</label>
+        <div className="row gap-xs" style={{ alignItems: "center", flexWrap: "nowrap" }}>
+          <select className="input" style={{ width: 160, flexShrink: 0 }} value={novoTipoId} onChange={(e) => setNovoTipoId(e.target.value)} disabled={tipos.length === 0}>
+            {tipos.length === 0 && <option value="">Nenhum tipo cadastrado</option>}
+            {tipos.map((t) => (
+              <option key={t.id} value={t.id}>{t.nome}</option>
+            ))}
+          </select>
+          <button type="button" className="btn btn--sm" style={{ flexShrink: 0, whiteSpace: "nowrap" }} onClick={addAmbiente} disabled={!novoTipoId}>
+            <Plus className="sidebar-nav-icon" /> Ambiente
+          </button>
+        </div>
+      </div>
+      {tipos.length === 0 && (
+        <div className="text-soft" style={{ fontSize: 12.5, marginBottom: 8 }}>
+          Nenhum tipo de ambiente cadastrado ainda — cadastre em{" "}
+          <Link to="/catalogo/ambientes">Cadastros auxiliares → Ambientes</Link>.
+        </div>
+      )}
+      {ambientes.length === 0 && <div className="text-soft" style={{ fontSize: 12.5, marginBottom: 8 }}>Nenhum ambiente ainda — adicione ao menos um (Sala, Cozinha, Suíte...).</div>}
+      <div className="stack gap-xs">
+        {ambientes.map((a) => (
+          <div key={a.id} className="row gap-sm" style={{ alignItems: "center", border: "1px solid var(--rule)", borderRadius: 8, padding: "8px 10px", background: "var(--paper)" }}>
+            <select className="input" style={{ flex: 1, minWidth: 0 }} value={a.nome} onChange={(e) => renomearAmbiente(a.id, e.target.value)}>
+              {/* Se o ambiente foi renomeado/excluído no cadastro auxiliar depois de já usado aqui, a grafia atual continua aparecendo. */}
+              {!tipos.some((t) => t.nome === a.nome) && <option value={a.nome}>{a.nome}</option>}
+              {tipos.map((t) => (
+                <option key={t.id} value={t.nome}>{t.nome}</option>
+              ))}
+            </select>
+            <button type="button" style={{ border: "none", background: "none", color: "var(--red-ink)", cursor: "pointer", padding: 4, flexShrink: 0 }} onClick={() => removeAmbiente(a.id)} aria-label="Remover ambiente">
+              <Trash2 className="sidebar-nav-icon" style={{ width: 14, height: 14 }} />
+            </button>
+          </div>
+        ))}
+      </div>
+      {ambientes.length > 0 && (
+        <div className="text-soft" style={{ fontSize: 12, marginTop: 8 }}>
+          Itens, materiais e opções de cada ambiente ficam na aba Catálogo do empreendimento.
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * CRUD de plantas (tipologias de unidade) de um empreendimento — passo
+ * "Plantas" do wizard de Cadastro. Card não-selecionado mostra resumo
+ * compacto; o formulário completo (características, ambientes, uploads)
+ * só aparece pra planta selecionada. Uploads é a última seção — vem
+ * depois de ambientes, que é o que se cadastra primeiro numa planta nova.
  */
 export function PlantasManager({ empreendimentoId, plantaSelecionadaId, onSelecionar }: { empreendimentoId: string; plantaSelecionadaId?: string; onSelecionar?: (plantaId: string) => void }) {
   const { catalogo, salvarPlanta, removerPlanta } = useApp();
@@ -325,7 +487,7 @@ export function PlantasManager({ empreendimentoId, plantaSelecionadaId, onSeleci
             );
           }
           return (
-            <div key={p.id} style={{ border: "2px solid var(--brand)", borderRadius: 8, padding: 14, background: "var(--green-bg)" }}>
+            <div key={p.id} className="card" style={{ border: "1px solid var(--rule-strong)" }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-soft)", marginBottom: 4 }}>Identificação</div>
               <div className="grid grid-2" style={{ gap: 8, marginBottom: 14 }}>
                 <div>
@@ -352,91 +514,14 @@ export function PlantasManager({ empreendimentoId, plantaSelecionadaId, onSeleci
                   <label className="label">Área total (m²)</label>
                   <input className="input" type="number" min={0} value={p.areaTotalM2 ?? ""} onChange={(e) => salvarPlanta(empreendimentoId, { ...p, areaTotalM2: e.target.value ? Number(e.target.value) : undefined })} />
                 </div>
-                <div>
-                  <label className="label">Quartos</label>
-                  <input className="input" type="number" min={0} value={p.quartos ?? ""} onChange={(e) => salvarPlanta(empreendimentoId, { ...p, quartos: e.target.value ? Number(e.target.value) : undefined })} />
-                </div>
-                <div>
-                  <label className="label">Suítes</label>
-                  <input className="input" type="number" min={0} value={p.suites ?? ""} onChange={(e) => salvarPlanta(empreendimentoId, { ...p, suites: e.target.value ? Number(e.target.value) : undefined })} />
-                </div>
-                <div>
-                  <label className="label">Banheiros</label>
-                  <input className="input" type="number" min={0} value={p.banheiros ?? ""} onChange={(e) => salvarPlanta(empreendimentoId, { ...p, banheiros: e.target.value ? Number(e.target.value) : undefined })} />
-                </div>
-                <div>
-                  <label className="label">Vagas</label>
-                  <input className="input" type="number" min={0} value={p.vagas ?? ""} onChange={(e) => salvarPlanta(empreendimentoId, { ...p, vagas: e.target.value ? Number(e.target.value) : undefined })} />
-                </div>
               </div>
 
-              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-soft)", marginBottom: 4 }}>Configuração</div>
-              <div style={{ marginBottom: 14 }}>
-                <label className="label">Número de ambientes</label>
-                <input className="input" style={{ maxWidth: 160 }} type="number" min={0} value={p.numeroAmbientes ?? ""} onChange={(e) => salvarPlanta(empreendimentoId, { ...p, numeroAmbientes: e.target.value ? Number(e.target.value) : undefined })} />
+              <div style={{ borderTop: "1px solid var(--rule)", margin: "4px 0 14px", paddingTop: 14 }}>
+                <AmbientesManager empreendimentoId={empreendimentoId} plantaId={p.id} />
               </div>
 
-              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-soft)", marginBottom: 4 }}>Versão / Status</div>
-              <div className="grid grid-2" style={{ gap: 8, marginBottom: 14 }}>
-                <div>
-                  <label className="label">Versão da planta</label>
-                  <input className="input" value={p.versao} onChange={(e) => salvarPlanta(empreendimentoId, { ...p, versao: e.target.value })} placeholder="1.0" />
-                </div>
-                <div>
-                  <label className="label">Data da versão</label>
-                  <input
-                    className="input"
-                    type="date"
-                    value={p.dataVersao ? paraInputDate(p.dataVersao) : ""}
-                    onChange={(e) => salvarPlanta(empreendimentoId, { ...p, dataVersao: e.target.value ? deInputDate(e.target.value) : null })}
-                  />
-                </div>
-                <div>
-                  <label className="label">Status</label>
-                  <select className="input" value={p.status} onChange={(e) => salvarPlanta(empreendimentoId, { ...p, status: e.target.value as StatusPlanta })}>
-                    <option value="ativa">Ativa</option>
-                    <option value="inativa">Inativa</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-soft)", marginBottom: 4 }}>Personalização</div>
-              <div className="grid grid-2" style={{ gap: 8, marginBottom: 14 }}>
-                <div>
-                  <label className="label">Opções permitidas</label>
-                  <input className="input" value={p.opcoesPermitidas} onChange={(e) => salvarPlanta(empreendimentoId, { ...p, opcoesPermitidas: e.target.value })} placeholder="Piso, revestimento, metais..." />
-                </div>
-                <div>
-                  <label className="label">Restrições</label>
-                  <input className="input" value={p.restricoes} onChange={(e) => salvarPlanta(empreendimentoId, { ...p, restricoes: e.target.value })} placeholder="Sem alteração de estrutura..." />
-                </div>
-                <div style={{ gridColumn: "1 / -1" }}>
-                  <label className="label">Unidades associadas a esta planta</label>
-                  <input
-                    className="input"
-                    value={p.unidadesLabel ?? ""}
-                    onChange={(e) => salvarPlanta(empreendimentoId, { ...p, unidadesLabel: e.target.value })}
-                    placeholder="Ex.: 101-110, 201-210, Torre A andares 2-14"
-                  />
-                </div>
-              </div>
-
-              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-soft)", marginBottom: 4 }}>Uploads</div>
-              <div style={{ marginBottom: 14 }}>
-                {META_ARQUIVOS_PLANTA.map((m) => (
-                  <UploadCompactRow
-                    key={m.key}
-                    label={m.label}
-                    accept={m.accept}
-                    arquivos={p.arquivos[m.key]}
-                    onAdd={(list) => {
-                      if (!list?.length) return;
-                      const incoming = Array.from(list).map((f) => ({ id: `${m.key}-${Date.now()}-${f.name}`, name: f.name, size: f.size }));
-                      salvarPlanta(empreendimentoId, { ...p, arquivos: { ...p.arquivos, [m.key]: [...p.arquivos[m.key], ...incoming] } });
-                    }}
-                    onClear={() => salvarPlanta(empreendimentoId, { ...p, arquivos: { ...p.arquivos, [m.key]: [] } })}
-                  />
-                ))}
+              <div style={{ borderTop: "1px solid var(--rule)", margin: "4px 0 14px", paddingTop: 14 }}>
+                <PlantaUploadsManager empreendimentoId={empreendimentoId} planta={p} />
               </div>
 
               <button
@@ -474,100 +559,215 @@ interface CelulaUnidade {
  * lote, cada venda é diferente). Com exatamente uma selecionada, o mesmo
  * modal também edita cliente/valor daquela unidade.
  */
-export function UnidadesHeatmap({ empreendimentoId, torres, plantas }: { empreendimentoId: string; torres: Torre[]; plantas: Planta[] }) {
-  const { unidadesRepo, salvarUnidade } = useApp();
+/** Cor por planta, gerada automaticamente pelo índice (ângulo dourado
+ * pra distribuir hues bem mesmo com poucas ou muitas plantas) — não é
+ * uma paleta fixa de N cores que estoura quando o empreendimento cresce. */
+function corPlanta(index: number): { bg: string; border: string } {
+  const hue = Math.round((index * 137.508) % 360);
+  return { bg: `hsl(${hue} 65% 88%)`, border: `hsl(${hue} 45% 55%)` };
+}
+
+/**
+ * Dois modos: "Pintar planta" (padrão) — escolhe a planta-pincel numa
+ * barra de chips coloridos (mesma cor da legenda) e clica nas unidades
+ * pra aplicar direto, sem modal, sem passo de seleção; clique de novo
+ * limpa. É o caminho rápido pra associar dezenas/centenas de unidades.
+ * "Vendas / detalhes" — clique abre a unidade pra registrar cliente,
+ * valor e (se preciso) trocar a planta, um registro de venda por vez.
+ * `somentePintura` esconde o modo "Vendas / detalhes" inteiro — usado no
+ * wizard de cadastro (só associação inicial de planta, cadastro simples).
+ * `somenteVendas` é o oposto — trava em "detalhes", esconde o toggle e o
+ * campo Planta do modal (isso já foi decidido no cadastro) e troca o campo
+ * Cliente por autocomplete contra `clientesConhecidos` — usado na ação
+ * "Vendas" da listagem de empreendimentos (ver UnidadesVendasPage), que só
+ * existe pra registrar venda rápido, não pra reassociar planta.
+ */
+export function UnidadesHeatmap({
+  empreendimentoId,
+  torres,
+  plantas,
+  somentePintura,
+  somenteVendas,
+  clientesConhecidos = [],
+}: {
+  empreendimentoId: string;
+  torres: Torre[];
+  plantas: Planta[];
+  somentePintura?: boolean;
+  somenteVendas?: boolean;
+  clientesConhecidos?: string[];
+}) {
+  const { unidadesRepo, salvarUnidade, garantirVinculoDaUnidade } = useApp();
   const toast = useToast();
+  const navigate = useNavigate();
   const salvas = unidadesRepo.listByEmpreendimento(empreendimentoId);
-  const [selecionadas, setSelecionadas] = useState<Map<string, CelulaUnidade>>(new Map());
-  const [modalAberto, setModalAberto] = useState(false);
-  const [plantaId, setPlantaId] = useState("");
+  const [modo, setModo] = useState<"pintar" | "detalhes">(somenteVendas ? "detalhes" : "pintar");
+  const [pincel, setPincel] = useState<string | null>(plantas[0]?.id ?? null);
+  const [unidadeModal, setUnidadeModal] = useState<CelulaUnidade | null>(null);
+  const [plantaModal, setPlantaModal] = useState("");
   const [clienteNome, setClienteNome] = useState("");
-  const [valor, setValor] = useState("");
+  const [valor, setValor] = useState(0);
 
-  function toggle(cel: CelulaUnidade) {
-    setSelecionadas((prev) => {
-      const next = new Map(prev);
-      if (next.has(cel.numero)) next.delete(cel.numero);
-      else next.set(cel.numero, cel);
-      return next;
-    });
-  }
-
-  function abrirModal() {
-    if (selecionadas.size === 1) {
-      const numero = [...selecionadas.keys()][0];
-      const salva = salvas.find((u) => u.numero === numero);
-      setPlantaId(salva?.plantaId ?? "");
-      setClienteNome(salva?.clienteNome ?? "");
-      setValor(salva?.valor != null ? String(salva.valor) : "");
-    } else {
-      setPlantaId("");
-      setClienteNome("");
-      setValor("");
+  function corDaCelula(salva: UnidadeAssociada | undefined): string {
+    if (salva?.clienteNome) return "var(--green-bg)";
+    if (salva?.plantaId) {
+      const idx = plantas.findIndex((p) => p.id === salva.plantaId);
+      return idx >= 0 ? corPlanta(idx).bg : "var(--paper-2)";
     }
-    setModalAberto(true);
+    return "var(--paper-2)";
   }
 
-  function aplicar() {
-    const unica = selecionadas.size === 1;
-    for (const [numero, cel] of selecionadas) {
-      const existente = salvas.find((u) => u.numero === numero);
-      const registro: UnidadeAssociada = {
-        numero,
+  function clicarCelula(cel: CelulaUnidade) {
+    const existente = salvas.find((u) => u.numero === cel.numero);
+    if (modo === "pintar") {
+      if (existente?.clienteNome) {
+        toast.error(`${cel.numero} já vendida — edite no modo "Vendas / detalhes".`);
+        return;
+      }
+      salvarUnidade({
+        numero: cel.numero,
         empreendimentoId,
         torreId: cel.torreId,
         pavimento: cel.pavimento,
         posicao: cel.posicao,
-        plantaId: plantaId || null,
-        clienteNome: unica ? clienteNome : (existente?.clienteNome ?? ""),
-        valor: unica ? (valor ? Number(valor) : null) : (existente?.valor ?? null),
-      };
-      salvarUnidade(registro);
+        plantaId: existente?.plantaId === pincel ? null : pincel,
+        clienteNome: "",
+        valor: existente?.valor ?? null,
+      });
+      return;
     }
-    toast.success(unica ? "Unidade atualizada." : `${selecionadas.size} unidades associadas.`);
-    setModalAberto(false);
-    setSelecionadas(new Map());
+    setUnidadeModal(cel);
+    setPlantaModal(existente?.plantaId ?? "");
+    setClienteNome(existente?.clienteNome ?? "");
+    setValor(existente?.valor ?? 0);
+  }
+
+  function salvarDetalhes() {
+    if (!unidadeModal) return;
+    salvarUnidade({
+      numero: unidadeModal.numero,
+      empreendimentoId,
+      torreId: unidadeModal.torreId,
+      pavimento: unidadeModal.pavimento,
+      posicao: unidadeModal.posicao,
+      plantaId: plantaModal || null,
+      clienteNome,
+      valor: valor > 0 ? valor : null,
+    });
+    toast.success(`Unidade ${unidadeModal.numero} atualizada.`);
+    setUnidadeModal(null);
+  }
+
+  /** Construtora inicia a personalização em nome do cliente que não sabe
+   * usar o app — mesmo wizard do portal do cliente, ver NovaPersonalizacaoPage. */
+  function iniciarPersonalizacao(unidade: UnidadeAssociada) {
+    const vinculo = garantirVinculoDaUnidade(unidade);
+    if (!vinculo) {
+      toast.error("Essa unidade precisa de uma planta associada antes de personalizar.");
+      return;
+    }
+    navigate(`/personalizar?vinculoId=${vinculo.id}`);
   }
 
   if (torres.length === 0) return null;
 
+  const nomePincel = pincel ? (plantas.find((p) => p.id === pincel)?.nome ?? "") : "Sem planta";
+  const unidadeSalvaAtual = unidadeModal ? salvas.find((u) => u.numero === unidadeModal.numero) : undefined;
+  const jaVendida = somenteVendas && Boolean(unidadeSalvaAtual?.clienteNome);
+
   return (
     <div className="card">
-      <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Associar unidades</div>
-      <div className="text-soft" style={{ fontSize: 12.5, marginBottom: 16 }}>
-        Número gerado automaticamente (torre + pavimento + posição, ex. A301) — clique pra selecionar uma ou várias unidades, depois associe a planta de uma vez.
+      <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{somenteVendas ? "Unidades" : "Associar unidades"}</div>
+      <div className="text-soft" style={{ fontSize: 12.5, marginBottom: 12 }}>
+        Número gerado automaticamente (torre + pavimento + posição, ex. A301).
       </div>
+
+      {!somentePintura && !somenteVendas && (
+        <div className="row gap-sm" style={{ marginBottom: 12 }}>
+          <button
+            type="button"
+            className="btn btn--sm"
+            style={modo === "pintar" ? { background: "color-mix(in srgb, var(--brand) 14%, var(--card))", borderColor: "var(--brand)", color: "var(--brand)" } : {}}
+            onClick={() => setModo("pintar")}
+          >
+            Pintar planta
+          </button>
+          <button
+            type="button"
+            className="btn btn--sm"
+            style={modo === "detalhes" ? { background: "color-mix(in srgb, var(--brand) 14%, var(--card))", borderColor: "var(--brand)", color: "var(--brand)" } : {}}
+            onClick={() => setModo("detalhes")}
+          >
+            Vendas / detalhes
+          </button>
+        </div>
+      )}
+
+      {(somentePintura || (modo === "pintar" && !somenteVendas)) ? (
+        <div style={{ marginBottom: 14 }}>
+          <div className="row gap-xs" style={{ flexWrap: "wrap", marginBottom: 8 }}>
+            <button
+              type="button"
+              className="btn btn--sm"
+              style={pincel === null ? { borderColor: "var(--ink)", boxShadow: "inset 0 0 0 1px var(--ink)" } : {}}
+              onClick={() => setPincel(null)}
+            >
+              Sem planta
+            </button>
+            {plantas.map((p, i) => {
+              const cor = corPlanta(i);
+              const ativo = pincel === p.id;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  className="btn btn--sm"
+                  style={{ background: cor.bg, borderColor: cor.border, boxShadow: ativo ? `inset 0 0 0 2px ${cor.border}` : "none" }}
+                  onClick={() => setPincel(p.id)}
+                >
+                  {p.nome}
+                </button>
+              );
+            })}
+          </div>
+          <div className="text-soft" style={{ fontSize: 12 }}>
+            Clique numa unidade pra pintar com "{nomePincel}" — clique de novo pra limpar. Unidade já vendida não é repintada aqui.
+          </div>
+        </div>
+      ) : (
+        <div className="text-soft" style={{ fontSize: 12, marginBottom: 14 }}>
+          {somenteVendas
+            ? "Clique numa unidade pra registrar a venda (cliente e valor)."
+            : "Clique numa unidade pra registrar cliente, valor e (se precisar) trocar a planta."}
+        </div>
+      )}
 
       <div className="stack gap-lg">
         {torres.map((t, ti) => (
           <div key={t.id}>
             <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 8 }}>{t.nome}</div>
             <div className="stack gap-xs">
-              {Array.from({ length: t.pavimentos }, (_, i) => t.pavimentos - i).map((pav) => (
+              {Array.from({ length: t.unidadesPorPavimento.length }, (_, i) => t.unidadesPorPavimento.length - i).map((pav) => (
                 <div key={pav} className="row gap-xs" style={{ alignItems: "center" }}>
                   <span className="mono text-soft" style={{ fontSize: 10, width: 20, flexShrink: 0, textAlign: "right" }}>{pav}</span>
-                  {Array.from({ length: t.unidadesPorPavimento }, (_, i) => i + 1).map((pos) => {
+                  {Array.from({ length: t.unidadesPorPavimento[pav - 1] }, (_, i) => i + 1).map((pos) => {
                     const numero = numeroUnidade(t.nome, ti, pav, pos);
                     const salva = salvas.find((u) => u.numero === numero);
-                    const isSel = selecionadas.has(numero);
-                    let bg = "var(--paper-2)";
-                    if (salva?.clienteNome) bg = "var(--green-bg)";
-                    else if (salva?.plantaId) bg = "var(--amber-bg)";
+                    const cel: CelulaUnidade = { numero, torreId: t.id, pavimento: pav, posicao: pos };
                     return (
                       <button
                         key={numero}
                         type="button"
-                        onClick={() => toggle({ numero, torreId: t.id, pavimento: pav, posicao: pos })}
+                        onClick={() => clicarCelula(cel)}
                         title={numero}
                         style={{
                           width: 36,
                           height: 26,
                           fontSize: 9.5,
-                          fontFamily: "'IBM Plex Mono', monospace",
-                          border: isSel ? "2px solid var(--brand)" : "1px solid var(--rule)",
+                          fontFamily: "'JetBrains Mono', monospace",
+                          border: "1px solid var(--rule)",
                           borderRadius: 4,
-                          background: bg,
-                          boxShadow: isSel ? "inset 0 0 0 1px var(--brand)" : "none",
+                          background: corDaCelula(salva),
                           cursor: "pointer",
                           flexShrink: 0,
                           padding: 0,
@@ -584,53 +784,56 @@ export function UnidadesHeatmap({ empreendimentoId, torres, plantas }: { empreen
         ))}
       </div>
 
-      <div className="row gap-sm" style={{ marginTop: 16, fontSize: 11.5, color: "var(--ink-soft)" }}>
-        <span className="row gap-xs" style={{ alignItems: "center" }}><span style={{ width: 12, height: 12, borderRadius: 3, background: "var(--paper-2)", border: "1px solid var(--rule)" }} /> Livre</span>
-        <span className="row gap-xs" style={{ alignItems: "center" }}><span style={{ width: 12, height: 12, borderRadius: 3, background: "var(--amber-bg)" }} /> Planta associada</span>
-        <span className="row gap-xs" style={{ alignItems: "center" }}><span style={{ width: 12, height: 12, borderRadius: 3, background: "var(--green-bg)" }} /> Vendida</span>
+      <div className="row gap-sm" style={{ marginTop: 16, fontSize: 11.5, color: "var(--ink-soft)", flexWrap: "wrap" }}>
+        <span className="row gap-xs" style={{ alignItems: "center" }}><span style={{ width: 12, height: 12, borderRadius: 3, background: "var(--paper-2)", border: "1px solid var(--rule)" }} /> Unidade sem planta</span>
+        {plantas.map((p, i) => (
+          <span key={p.id} className="row gap-xs" style={{ alignItems: "center" }}>
+            <span style={{ width: 12, height: 12, borderRadius: 3, background: corPlanta(i).bg }} /> {p.nome}
+          </span>
+        ))}
+        {!somentePintura && (
+          <span className="row gap-xs" style={{ alignItems: "center" }}><span style={{ width: 12, height: 12, borderRadius: 3, background: "var(--green-bg)" }} /> Vendida</span>
+        )}
       </div>
 
-      {selecionadas.size > 0 && (
-        <div className="row gap-sm" style={{ marginTop: 16, alignItems: "center", justifyContent: "space-between", background: "var(--paper)", borderRadius: 8, padding: "10px 14px", flexWrap: "wrap" }}>
-          <span style={{ fontSize: 13, fontWeight: 600 }}>
-            {selecionadas.size} unidade{selecionadas.size > 1 ? "s" : ""} selecionada{selecionadas.size > 1 ? "s" : ""}
-          </span>
-          <div className="row gap-sm">
-            <button type="button" className="btn btn--sm" onClick={() => setSelecionadas(new Map())}>Limpar seleção</button>
-            <button type="button" className="btn btn--primary btn--sm" onClick={abrirModal}>Associar planta</button>
-          </div>
-        </div>
-      )}
-
-      <Modal
-        open={modalAberto}
-        onClose={() => setModalAberto(false)}
-        title={selecionadas.size === 1 ? `Unidade ${[...selecionadas.keys()][0]}` : `Associar planta — ${selecionadas.size} unidades`}
-      >
+      <Modal open={unidadeModal != null} onClose={() => setUnidadeModal(null)} title={unidadeModal ? `Unidade ${unidadeModal.numero}` : ""}>
         <div className="stack gap-sm">
-          <FormField label="Planta">
-            <select className="input" value={plantaId} onChange={(e) => setPlantaId(e.target.value)}>
-              <option value="">Sem planta associada</option>
-              {plantas.map((p) => (
-                <option key={p.id} value={p.id}>{p.nome}</option>
-              ))}
-            </select>
+          {!somenteVendas && (
+            <FormField label="Planta">
+              <select className="input" value={plantaModal} onChange={(e) => setPlantaModal(e.target.value)}>
+                <option value="">Sem planta associada</option>
+                {plantas.map((p) => (
+                  <option key={p.id} value={p.id}>{p.nome}</option>
+                ))}
+              </select>
+            </FormField>
+          )}
+          <FormField label="Valor (R$)">
+            <MoedaInput value={valor} onChange={setValor} />
           </FormField>
-          {selecionadas.size === 1 && (
-            <>
-              <FormField label="Valor (R$)">
-                <input className="input" type="number" min={0} value={valor} onChange={(e) => setValor(e.target.value)} />
-              </FormField>
-              <FormField label="Cliente / comprador">
-                <input className="input" value={clienteNome} onChange={(e) => setClienteNome(e.target.value)} placeholder="Nome do comprador" />
-              </FormField>
-            </>
+          <FormField label="Cliente / comprador">
+            {somenteVendas ? (
+              <select className="input" value={clienteNome} onChange={(e) => setClienteNome(e.target.value)}>
+                <option value="">Selecione o cliente</option>
+                {clientesConhecidos.map((nome) => (
+                  <option key={nome} value={nome}>{nome}</option>
+                ))}
+              </select>
+            ) : (
+              <input className="input" value={clienteNome} onChange={(e) => setClienteNome(e.target.value)} placeholder="Nome do comprador" />
+            )}
+          </FormField>
+          {jaVendida && unidadeSalvaAtual && (
+            <div className="row" style={{ justifyContent: "space-between", alignItems: "center", background: "var(--green-bg)", borderRadius: 8, padding: "8px 10px" }}>
+              <span style={{ fontSize: 12, color: "var(--green-ink)" }}>Unidade já vendida — inicie a personalização em nome do cliente.</span>
+              <button type="button" className="btn btn--primary btn--sm" onClick={() => iniciarPersonalizacao(unidadeSalvaAtual)}>
+                Iniciar personalização
+              </button>
+            </div>
           )}
           <div className="row gap-sm" style={{ justifyContent: "flex-end", marginTop: 10 }}>
-            <button type="button" className="btn btn--sm" onClick={() => setModalAberto(false)}>Cancelar</button>
-            <button type="button" className="btn btn--primary btn--sm" onClick={aplicar}>
-              {selecionadas.size === 1 ? "Salvar unidade" : `Aplicar a ${selecionadas.size} unidades`}
-            </button>
+            <button type="button" className="btn btn--sm" onClick={() => setUnidadeModal(null)}>Cancelar</button>
+            <button type="button" className="btn btn--primary btn--sm" onClick={salvarDetalhes}>Salvar unidade</button>
           </div>
         </div>
       </Modal>
@@ -644,15 +847,16 @@ interface EditorProps {
   construtoraId: string;
 }
 
-/** Remounted (via `key`) every time the selected empreendimento+planta
- * changes, so its local edit buffer always starts from that planta's own
- * saved catalog instead of leaking edits across plantas/empreendimentos.
- * Usado tanto em CatalogoPage quanto no wizard de Cadastro. */
+/** Mounted once per planta card dentro de PlantasManager — troca de planta
+ * selecionada desmonta/remonta essa árvore, então o buffer local sempre
+ * parte do catálogo salvo daquela planta, sem vazar edição entre plantas.
+ * Verba compartilhada (AllowanceGroup) não tem mais UI de edição aqui —
+ * removida a pedido; `grupos` só é lido e repassado intacto pra não
+ * apagar dado legado ao salvar edição de item. */
 export function CatalogoPlantaEditor({ empreendimentoId, plantaId, construtoraId }: EditorProps) {
   const { catalogo, catalogoMateriais, catalogoCategorias, catalogoMarcas, salvarCatalogo } = useApp();
-  const [ambientes, setAmbientes] = useState<Ambiente[]>(() => catalogo.getAmbientesByPlanta(empreendimentoId, plantaId));
-  const [grupos, setGrupos] = useState<AllowanceGroup[]>(() => catalogo.getAllowanceGroupsByPlanta(empreendimentoId, plantaId));
-  const [dirty, setDirty] = useState(false);
+  const ambientes = catalogo.getAmbientesByPlanta(empreendimentoId, plantaId);
+  const grupos = catalogo.getAllowanceGroupsByPlanta(empreendimentoId, plantaId);
   const categorias = catalogoCategorias.list(construtoraId);
   const marcas = catalogoMarcas.list(construtoraId);
   const materiais: MaterialResolvido[] = catalogoMateriais.list(construtoraId).map((m) => ({
@@ -661,116 +865,59 @@ export function CatalogoPlantaEditor({ empreendimentoId, plantaId, construtoraId
     marcaNome: marcas.find((mm) => mm.id === m.marcaId)?.nome ?? "?",
   }));
 
-  function mutarAmbientes(updater: (prev: Ambiente[]) => Ambiente[]) {
-    setAmbientes(updater);
-    setDirty(true);
-  }
-  function mutarGrupos(updater: (prev: AllowanceGroup[]) => AllowanceGroup[]) {
-    setGrupos(updater);
-    setDirty(true);
-  }
-
-  function updateAmbiente(ambienteId: string, patch: Partial<Ambiente>) {
-    mutarAmbientes((prev) => prev.map((a) => (a.id === ambienteId ? { ...a, ...patch } : a)));
-  }
-  function addAmbiente() {
-    mutarAmbientes((prev) => [...prev, { id: gerarId("amb"), nome: "Novo ambiente", itens: [] }]);
-  }
-  function removeAmbiente(ambienteId: string) {
-    mutarAmbientes((prev) => prev.filter((a) => a.id !== ambienteId));
-    mutarGrupos((prev) => prev.filter((g) => g.ambienteId !== ambienteId));
+  function salvar(ambientesNovos: Ambiente[], gruposNovos: AllowanceGroup[]) {
+    salvarCatalogo(empreendimentoId, plantaId, ambientesNovos, gruposNovos);
   }
 
   function updateItem(ambienteId: string, itemId: string, patch: Partial<Item>) {
-    mutarAmbientes((prev) => prev.map((a) => (a.id !== ambienteId ? a : { ...a, itens: a.itens.map((i) => (i.id === itemId ? { ...i, ...patch } : i)) })));
+    salvar(ambientes.map((a) => (a.id !== ambienteId ? a : { ...a, itens: a.itens.map((i) => (i.id === itemId ? { ...i, ...patch } : i)) })), grupos);
   }
   function addItem(ambienteId: string) {
-    mutarAmbientes((prev) =>
-      prev.map((a) =>
+    salvar(
+      ambientes.map((a) =>
         a.id !== ambienteId
           ? a
           : { ...a, itens: [...a.itens, { id: gerarId("item"), nome: "Novo item", nivel: 1, padrao: "", valorPadrao: 0, prazoInicio: null, prazoFim: null, opcoes: [] }] },
       ),
+      grupos,
     );
   }
   function removeItem(ambienteId: string, itemId: string) {
-    mutarAmbientes((prev) => prev.map((a) => (a.id !== ambienteId ? a : { ...a, itens: a.itens.filter((i) => i.id !== itemId) })));
-    mutarGrupos((prev) => prev.map((g) => ({ ...g, itemIds: g.itemIds.filter((id) => id !== itemId) })));
+    salvar(
+      ambientes.map((a) => (a.id !== ambienteId ? a : { ...a, itens: a.itens.filter((i) => i.id !== itemId) })),
+      grupos.map((g) => ({ ...g, itemIds: g.itemIds.filter((id) => id !== itemId) })),
+    );
   }
   function updateItemOpcoes(ambienteId: string, itemId: string, updater: (opcoes: Opcao[]) => Opcao[]) {
-    mutarAmbientes((prev) =>
-      prev.map((a) => (a.id !== ambienteId ? a : { ...a, itens: a.itens.map((i) => (i.id !== itemId ? i : { ...i, opcoes: updater(i.opcoes) })) })),
+    salvar(
+      ambientes.map((a) => (a.id !== ambienteId ? a : { ...a, itens: a.itens.map((i) => (i.id !== itemId ? i : { ...i, opcoes: updater(i.opcoes) })) })),
+      grupos,
     );
   }
-  function atribuirGrupo(ambienteId: string, itemId: string, novoGroupId: string) {
-    updateItem(ambienteId, itemId, { allowanceGroupId: novoGroupId || undefined });
-    mutarGrupos((prev) =>
-      prev.map((g) => {
-        if (g.id === novoGroupId) return g.itemIds.includes(itemId) ? g : { ...g, itemIds: [...g.itemIds, itemId] };
-        return g.itemIds.includes(itemId) ? { ...g, itemIds: g.itemIds.filter((id) => id !== itemId) } : g;
-      }),
-    );
-  }
-
-  function addGrupo(ambienteId: string) {
-    mutarGrupos((prev) => [...prev, { id: gerarId("ag"), nome: "Nova verba", ambienteId, valorTotal: 0, itemIds: [] }]);
-  }
-  function updateGrupo(groupId: string, patch: Partial<AllowanceGroup>) {
-    mutarGrupos((prev) => prev.map((g) => (g.id === groupId ? { ...g, ...patch } : g)));
-  }
-  function removeGrupo(groupId: string) {
-    mutarGrupos((prev) => prev.filter((g) => g.id !== groupId));
-    mutarAmbientes((prev) => prev.map((a) => ({ ...a, itens: a.itens.map((i) => (i.allowanceGroupId === groupId ? { ...i, allowanceGroupId: undefined } : i)) })));
-  }
-
-  function handleSalvar() {
-    salvarCatalogo(empreendimentoId, plantaId, ambientes, grupos);
-    setDirty(false);
-  }
-
   return (
     <div className="stack gap-lg">
-      <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ fontWeight: 700, fontSize: 16 }}>Ambientes e itens</div>
-        <div className="row gap-sm" style={{ alignItems: "center" }}>
-          {dirty && <span style={{ fontSize: 12, color: "var(--amber-ink)" }}>Alterações não salvas</span>}
-          <button type="button" className="btn btn--primary btn--sm" onClick={handleSalvar}>Salvar catálogo</button>
-        </div>
-      </div>
+      <div style={{ fontWeight: 700, fontSize: 16 }}>Catálogo — itens e opções por ambiente</div>
 
       {ambientes.length === 0 && (
-        <div className="card text-soft" style={{ fontSize: 13 }}>Nenhum ambiente cadastrado nesta planta ainda.</div>
+        <div className="card text-soft" style={{ fontSize: 13 }}>Nenhum ambiente cadastrado nesta planta ainda — volte ao passo "Plantas" e adicione ambientes (Sala, Cozinha, Suíte...).</div>
       )}
 
       <div className="stack gap-lg">
         {ambientes.map((amb) => {
-          const gruposDoAmbiente = grupos.filter((g) => g.ambienteId === amb.id);
-          const ambientesConhecidos = dedupeCi(ambientes.map((a) => a.nome), AMBIENTES_SUGERIDOS);
           return (
             <div key={amb.id} className="card">
-              <div className="row gap-sm" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                <SugestaoInput
-                  style={{ maxWidth: 260, fontWeight: 700 }}
-                  value={amb.nome}
-                  options={ambientesConhecidos}
-                  onChange={(v) => updateAmbiente(amb.id, { nome: v })}
-                />
-                <button type="button" className="btn btn--sm" onClick={() => removeAmbiente(amb.id)}>
-                  <Trash2 className="sidebar-nav-icon" style={{ width: 14, height: 14 }} /> Remover ambiente
-                </button>
-              </div>
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 14 }}>{amb.nome}</div>
 
               <div className="stack gap-sm" style={{ marginBottom: 14 }}>
                 {amb.itens.map((item) => (
                   <ItemRow
                     key={item.id}
                     item={item}
-                    grupos={gruposDoAmbiente}
+                    categorias={categorias}
                     materiais={materiais}
                     onChange={(patch) => updateItem(amb.id, item.id, patch)}
                     onRemove={() => removeItem(amb.id, item.id)}
                     onOpcoesChange={(updater) => updateItemOpcoes(amb.id, item.id, updater)}
-                    onAtribuirGrupo={(groupId) => atribuirGrupo(amb.id, item.id, groupId)}
                   />
                 ))}
               </div>
@@ -779,33 +926,11 @@ export function CatalogoPlantaEditor({ empreendimentoId, plantaId, construtoraId
                 <button type="button" className="btn btn--sm" onClick={() => addItem(amb.id)}>
                   <Plus className="sidebar-nav-icon" /> Item
                 </button>
-                <button type="button" className="btn btn--sm" onClick={() => addGrupo(amb.id)}>
-                  <Plus className="sidebar-nav-icon" /> Verba compartilhada neste ambiente
-                </button>
               </div>
-
-              {gruposDoAmbiente.length > 0 && (
-                <div className="stack gap-sm" style={{ marginTop: 14 }}>
-                  {gruposDoAmbiente.map((g) => (
-                    <div key={g.id} className="row gap-sm" style={{ alignItems: "center", border: "1px dashed var(--rule-strong)", borderRadius: 8, padding: 10, flexWrap: "wrap" }}>
-                      <input className="input" style={{ flex: "1 1 160px" }} value={g.nome} onChange={(e) => updateGrupo(g.id, { nome: e.target.value })} />
-                      <input className="input" style={{ flex: "0 1 140px" }} type="number" min={0} value={g.valorTotal} onChange={(e) => updateGrupo(g.id, { valorTotal: Number(e.target.value) })} />
-                      <span className="text-soft" style={{ fontSize: 12 }}>{g.itemIds.length} item(ns) vinculado(s) — atribua pelo campo "Grupo de verba" em cada item</span>
-                      <button type="button" style={{ border: "none", background: "none", color: "var(--red-ink)", cursor: "pointer" }} onClick={() => removeGrupo(g.id)} aria-label="Remover verba">
-                        <Trash2 className="sidebar-nav-icon" style={{ width: 14, height: 14 }} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           );
         })}
       </div>
-
-      <button type="button" className="btn" style={{ alignSelf: "flex-start" }} onClick={addAmbiente}>
-        <Plus className="sidebar-nav-icon" /> Novo ambiente
-      </button>
     </div>
   );
 }

@@ -1,6 +1,8 @@
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
-import { LogOut, Menu, X } from "lucide-react";
+import { LogOut, Menu, Moon, Sun, X } from "lucide-react";
+import { BrandMark } from "./BrandMark";
+import { useTheme } from "../state/ThemeContext";
 
 export interface SidebarSection {
   label: string;
@@ -43,11 +45,13 @@ export function SidebarShell({
 }: SidebarShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     setDrawerOpen(false);
   }, [location.pathname]);
 
+  const isPlanttaBrand = brandName === "plantta";
   const brandInitial = brandName.trim()[0]?.toUpperCase() ?? "P";
   const userInitials = (userName ?? "")
     .split(" ")
@@ -61,14 +65,16 @@ export function SidebarShell({
       <div className="sidebar-brand">
         {brandLogo ? (
           <img src={brandLogo} alt={brandName} className="sidebar-brand-logo" />
+        ) : isPlanttaBrand ? (
+          <BrandMark size={26} />
         ) : (
           <span className="sidebar-brand-mark" style={{ background: brandColor }}>
             {brandInitial}
           </span>
         )}
         <div style={{ minWidth: 0 }}>
-          {!brandLogo && <div className="sidebar-brand-name">{brandName}</div>}
-          <div className="sidebar-brand-tag" style={brandLogo ? { marginTop: 6 } : undefined}>{brandTag}</div>
+          {!brandLogo && !isPlanttaBrand && <div className="sidebar-brand-name">{brandName}</div>}
+          <div className="sidebar-brand-tag" style={brandLogo || isPlanttaBrand ? { marginTop: 6 } : undefined}>{brandTag}</div>
         </div>
       </div>
 
@@ -93,6 +99,9 @@ export function SidebarShell({
               {userRole && <div className="sidebar-user-role">{userRole}</div>}
             </div>
           </div>
+          <button type="button" className="sidebar-logout" onClick={toggleTheme}>
+            {theme === "dark" ? <Sun className="sidebar-nav-icon" /> : <Moon className="sidebar-nav-icon" />} Tema {theme === "dark" ? "claro" : "escuro"}
+          </button>
           <button type="button" className="sidebar-logout" onClick={onLogout}>
             <LogOut className="sidebar-nav-icon" /> Sair
           </button>
@@ -100,6 +109,9 @@ export function SidebarShell({
       )}
       {!userName && (
         <div className="sidebar-footer">
+          <button type="button" className="sidebar-logout" onClick={toggleTheme}>
+            {theme === "dark" ? <Sun className="sidebar-nav-icon" /> : <Moon className="sidebar-nav-icon" />} Tema {theme === "dark" ? "claro" : "escuro"}
+          </button>
           <button type="button" className="sidebar-logout" onClick={onLogout}>
             <LogOut className="sidebar-nav-icon" /> Sair
           </button>
@@ -109,11 +121,13 @@ export function SidebarShell({
   );
 
   return (
-    <div className="portal-shell" style={{ ["--brand" as string]: brandColor }}>
+    <div className="portal-shell" data-theme={theme} style={{ ["--brand" as string]: brandColor }}>
       <header className="portal-topbar">
         <div className="row gap-sm" style={{ alignItems: "center" }}>
           {brandLogo ? (
             <img src={brandLogo} alt={brandName} className="portal-topbar-logo" />
+          ) : isPlanttaBrand ? (
+            <BrandMark size={24} />
           ) : (
             <>
               <span className="portal-topbar-mark" style={{ background: brandColor }}>

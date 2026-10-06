@@ -1,12 +1,13 @@
 import { lazy, Suspense, useState } from "react";
 import { Link } from "react-router-dom";
-import { Pencil, Plus, Trash2, ImageOff, Box, Smartphone } from "lucide-react";
+import { Pencil, Plus, Trash2, X, Box, Smartphone } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { DataTable } from "../components/DataTable";
 import { FilterBar, textMatch } from "../components/FilterBar";
 import { Modal } from "../components/Modal";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { FormField } from "../components/FormField";
+import { ImageThumb } from "../components/ImageThumb";
 import { useToast } from "../components/Toast";
 import { registrarVisualizacao } from "../lib/analytics";
 
@@ -16,6 +17,7 @@ import { registrarVisualizacao } from "../lib/analytics";
 const Material3DPreview = lazy(() => import("../components/Material3DPreview").then((m) => ({ default: m.Material3DPreview })));
 const MaterialARSwatch = lazy(() => import("../components/MaterialARSwatch").then((m) => ({ default: m.MaterialARSwatch })));
 import { useApp } from "../state/AppContext";
+import { useLoading } from "../state/LoadingContext";
 import { materiaisEmUsoIds } from "../domain/usage";
 import { required } from "../domain/validation";
 import type { MaterialCatalogItem } from "../domain/types";
@@ -35,6 +37,7 @@ interface Draft {
 
 export function MateriaisPage() {
   const { construtoraLogadaId, catalogo, catalogoMateriais, catalogoCategorias, catalogoMarcas, catalogoFornecedores, criarMaterial, atualizarMaterial, removerMaterial } = useApp();
+  const { runComLoading } = useLoading();
   const toast = useToast();
   const construtoraId = construtoraLogadaId ?? "";
   const materiais = catalogoMateriais.list(construtoraId);
@@ -94,12 +97,12 @@ export function MateriaisPage() {
     });
   }
 
-  function onFotoSelecionada(file: File | undefined) {
-    if (!file || !modal) return;
+
+  function handleImagem(fileList: FileList | null) {
+    const file = fileList?.[0];
+    if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      setModal((m) => (m ? { ...m, imagemUrl: ev.target?.result as string } : m));
-    };
+    reader.onload = () => setModal((m) => (m ? { ...m, imagemUrl: reader.result as string } : m));
     reader.readAsDataURL(file);
   }
 
@@ -119,31 +122,25 @@ export function MateriaisPage() {
       setModal({ ...modal, errors });
       return;
     }
-    const payload = {
-      categoriaId: modal.categoriaId,
-      marcaId: modal.marcaId,
-      fornecedorId: modal.fornecedorId,
-      modelo: modal.modelo.trim(),
-      sku: modal.sku.trim(),
-      imagemUrl: modal.imagemUrl,
-      roughness: modal.roughness,
-      metalness: modal.metalness,
-    };
-    if (modal.id) {
-      atualizarMaterial(modal.id, payload);
-      toast.success("Material atualizado.");
-    } else {
-      criarMaterial({ construtoraId, ...payload });
-      toast.success("Material criado.");
-    }
-    setModal(null);
+    const payload = { categoriaId: modal.categoriaId, marcaId: modal.marcaId, fornecedorId: modal.fornecedorId, modelo: modal.modelo.trim(), sku: modal.sku.trim(), imagemUrl: modal.imagemUrl, roughness: modal.roughness, metalness: modal.metalness };
+    const editando = Boolean(modal.id);
+    const id = modal.id;
+    runComLoading(() => {
+      if (editando && id) atualizarMaterial(id, payload);
+      else criarMaterial({ construtoraId, ...payload });
+    }, editando ? "Salvando material..." : "Criando material...").then(() => {
+      toast.success(editando ? "Material atualizado." : "Material criado.");
+      setModal(null);
+    });
   }
 
   function confirmarExclusao() {
     if (!excluindo) return;
-    removerMaterial(excluindo.id);
-    toast.success("Material excluído.");
-    setExcluindo(null);
+    const alvo = excluindo;
+    runComLoading(() => removerMaterial(alvo.id), "Excluindo material...").then(() => {
+      toast.success("Material excluído.");
+      setExcluindo(null);
+    });
   }
 
   return (
@@ -192,26 +189,21 @@ export function MateriaisPage() {
       {!semPreRequisito && (
         <DataTable
           columns={[
+            { key: "categoria", header: "Categoria", sortValue: (m) => categoriaNome(m.categoriaId), render: (m) => categoriaNome(m.categoriaId) },
+            { key: "marca", header: "Marca", sortValue: (m) => marcaNome(m.marcaId), render: (m) => marcaNome(m.marcaId) },
+            { key: "fornecedor", header: "Fornecedor", sortValue: (m) => fornecedorNome(m.fornecedorId), render: (m) => fornecedorNome(m.fornecedorId) },
             {
-              key: "foto",
-              header: "Foto",
-              width: "56px",
-              render: (m) =>
-                m.imagemUrl ? (
-                  <img src={m.imagemUrl} alt={m.modelo} style={{ width: 36, height: 36, borderRadius: 6, objectFit: "cover", border: "1px solid var(--rule)" }} />
-                ) : (
-                  <div
-                    style={{ width: 36, height: 36, borderRadius: 6, border: "1px dashed var(--rule-strong)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink-softer)" }}
-                  >
-                    <ImageOff size={14} />
-                  </div>
-                ),
+              key: "modelo",
+              header: "Modelo",
+              sortValue: (m) => m.modelo,
+              render: (m) => (
+                <div className="row gap-sm" style={{ alignItems: "center" }}>
+                  <ImageThumb url={m.imagemUrl} alt={m.modelo} size={36} />
+                  <span>{m.modelo}</span>
+                </div>
+              ),
             },
-            { key: "categoria", header: "Categoria", render: (m) => categoriaNome(m.categoriaId) },
-            { key: "marca", header: "Marca", render: (m) => marcaNome(m.marcaId) },
-            { key: "fornecedor", header: "Fornecedor", render: (m) => fornecedorNome(m.fornecedorId) },
-            { key: "modelo", header: "Modelo", render: (m) => m.modelo },
-            { key: "sku", header: "SKU", mono: true, render: (m) => m.sku || "—" },
+            { key: "sku", header: "SKU", idColumn: true, sortValue: (m) => m.sku, render: (m) => m.sku || "—" },
             {
               key: "uso",
               header: "Uso",
@@ -297,9 +289,16 @@ export function MateriaisPage() {
             <FormField label="SKU" htmlFor="mat-sku">
               <input id="mat-sku" className="input" value={modal.sku} placeholder="PTB-PREM-8080" onChange={(e) => setModal({ ...modal, sku: e.target.value })} />
             </FormField>
-
-            <FormField label="Foto do material" htmlFor="mat-foto" hint="Usada no preview 3D — foto do padrão em close, o mais reta possível.">
-              <input id="mat-foto" type="file" accept="image/*" className="input" onChange={(e) => onFotoSelecionada(e.target.files?.[0])} />
+            <FormField label="Imagem" htmlFor="mat-imagem" hint="Facilita identificar o material na hora de cadastrar itens e pra quem for personalizar.">
+              <div className="row gap-sm" style={{ alignItems: "center" }}>
+                <ImageThumb url={modal.imagemUrl} alt={modal.modelo || "Material"} size={48} />
+                <input id="mat-imagem" type="file" accept="image/*" style={{ fontSize: 12, flex: 1, minWidth: 0 }} onChange={(e) => handleImagem(e.target.files)} />
+                {modal.imagemUrl && (
+                  <button type="button" className="table-icon-btn" title="Remover imagem" aria-label="Remover imagem" onClick={() => setModal({ ...modal, imagemUrl: null })}>
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
             </FormField>
 
             {modal.imagemUrl && (

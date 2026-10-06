@@ -1,8 +1,8 @@
-import { useId } from "react";
+import { SugestaoInput } from "./SugestaoInput";
 
-/** Barra de filtro das listagens — busca com sugestão nativa (mesmo padrão
- * de datalist do SugestaoInput.tsx) + slot pra filtros adicionais (select
- * de categoria, chips de papel, etc.), tudo client-side. */
+/** Barra de filtro das listagens — busca com dropdown de sugestão custom
+ * (SugestaoInput) + slot pra filtros adicionais (select de categoria,
+ * chips de papel, etc.), tudo client-side. */
 export function FilterBar({
   value,
   onChange,
@@ -16,23 +16,20 @@ export function FilterBar({
   suggestions: string[];
   children?: React.ReactNode;
 }) {
-  const listId = useId();
   return (
     <div className="filter-bar">
       <div style={{ flex: "1 1 240px" }}>
-        <input
-          className="input"
-          list={listId}
+        {/* .input já é --paper por padrão (contraste dentro de um .card);
+            aqui a busca fica direto na página, cujo fundo também é
+            --paper, então o campo precisa de --card pra não sumir. */}
+        <SugestaoInput
           value={value}
+          options={[...new Set(suggestions)]}
+          onChange={onChange}
           placeholder={placeholder}
-          onChange={(e) => onChange(e.target.value)}
-          aria-label={placeholder}
+          ariaLabel={placeholder}
+          inputStyle={{ background: "var(--card)" }}
         />
-        <datalist id={listId}>
-          {[...new Set(suggestions)].map((s, i) => (
-            <option key={i} value={s} />
-          ))}
-        </datalist>
       </div>
       {children}
     </div>

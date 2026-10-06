@@ -3,8 +3,12 @@ import { useNavigate, useParams } from "react-router-dom";
 import { PageHeader } from "../components/PageHeader";
 import { FormField } from "../components/FormField";
 import { useToast } from "../components/Toast";
+import { MaskedInput } from "../components/MaskedInput";
 import { useApp } from "../state/AppContext";
-import { email as emailValidator, required, uf as ufValidator } from "../domain/validation";
+import { useLoading } from "../state/LoadingContext";
+import { cnpjCpf as cnpjCpfValidator, email as emailValidator, required, uf as ufValidator } from "../domain/validation";
+import { maskCEP, maskCpfCnpj, maskTelefone } from "../domain/mask";
+import { mockEnderecoPorCep } from "../domain/cepMock";
 import type { Fornecedor } from "../domain/types";
 
 type Draft = Omit<Fornecedor, "id" | "construtoraId">;
@@ -16,6 +20,7 @@ const VAZIO: Draft = {
 
 const VALIDATORS: Partial<Record<keyof Draft, (v: string) => string | undefined>> = {
   razaoSocial: required("Razão social é obrigatória"),
+  cnpjCpf: cnpjCpfValidator(),
   email: emailValidator(),
   uf: ufValidator(),
 };
@@ -25,6 +30,7 @@ export function FornecedorFormPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const { construtoraLogadaId, catalogoFornecedores, criarFornecedor, atualizarFornecedor } = useApp();
+  const { runComLoading } = useLoading();
   const construtoraId = construtoraLogadaId ?? "";
   const existente = id ? catalogoFornecedores.list(construtoraId).find((f) => f.id === id) : undefined;
 
@@ -48,6 +54,18 @@ export function FornecedorFormPage() {
     const validator = VALIDATORS[key];
     if (!validator) return;
     setErrors((e) => ({ ...e, [key]: validator(draft[key] as string) }));
+  }
+
+  function handleCepBlur() {
+    if (draft.cep.replace(/\D/g, "").length !== 8) return;
+    const mock = mockEnderecoPorCep(draft.cep);
+    if (mock) {
+      runComLoading(() => {
+        setField("endereco", mock.rua);
+        setField("cidade", mock.cidade);
+        setField("uf", mock.uf);
+      }, "Buscando endereço pelo CEP...");
+    }
   }
 
   function validarTudo(): boolean {
@@ -105,8 +123,17 @@ export function FornecedorFormPage() {
             <FormField label="Nome fantasia" htmlFor="forn-nomeFantasia">
               <input id="forn-nomeFantasia" className="input" value={draft.nomeFantasia} placeholder="Portobello Distribuidora SP" onChange={(e) => setField("nomeFantasia", e.target.value)} />
             </FormField>
-            <FormField label="CNPJ/CPF" htmlFor="forn-cnpjCpf">
-              <input id="forn-cnpjCpf" className="input" value={draft.cnpjCpf} placeholder="00.000.000/0001-00" onChange={(e) => setField("cnpjCpf", e.target.value)} />
+            <FormField label="CNPJ/CPF" htmlFor="forn-cnpjCpf" error={errors.cnpjCpf}>
+              <MaskedInput
+                id="forn-cnpjCpf"
+                className={errors.cnpjCpf ? "input input--invalid" : "input"}
+                mask={maskCpfCnpj}
+                maxDigits={14}
+                value={draft.cnpjCpf}
+                placeholder="00.000.000/0001-00"
+                onChange={(v) => setField("cnpjCpf", v)}
+                onBlur={() => blurField("cnpjCpf")}
+              />
             </FormField>
           </div>
         </div>
@@ -118,10 +145,10 @@ export function FornecedorFormPage() {
               <input id="forn-responsavel" className="input" value={draft.responsavel} placeholder="Nome do contato" onChange={(e) => setField("responsavel", e.target.value)} />
             </FormField>
             <FormField label="Telefone" htmlFor="forn-telefone">
-              <input id="forn-telefone" className="input" value={draft.telefone} placeholder="(11) 3000-0000" onChange={(e) => setField("telefone", e.target.value)} />
+              <MaskedInput id="forn-telefone" mask={maskTelefone} maxDigits={11} value={draft.telefone} placeholder="(11) 3000-0000" onChange={(v) => setField("telefone", v)} />
             </FormField>
             <FormField label="WhatsApp" htmlFor="forn-whatsapp">
-              <input id="forn-whatsapp" className="input" value={draft.whatsapp} placeholder="(11) 90000-0000" onChange={(e) => setField("whatsapp", e.target.value)} />
+              <MaskedInput id="forn-whatsapp" mask={maskTelefone} maxDigits={11} value={draft.whatsapp} placeholder="(11) 90000-0000" onChange={(v) => setField("whatsapp", v)} />
             </FormField>
             <FormField label="E-mail" htmlFor="forn-email" error={errors.email}>
               <input
@@ -141,9 +168,9 @@ export function FornecedorFormPage() {
           <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-soft)", marginBottom: 12 }}>Endereço</div>
           <div className="grid grid-2" style={{ gap: 12 }}>
             <FormField label="CEP" htmlFor="forn-cep">
-              <input id="forn-cep" className="input" value={draft.cep} placeholder="00000-000" onChange={(e) => setField("cep", e.target.value)} />
+              <MaskedInput id="forn-cep" mask={maskCEP} maxDigits={8} value={draft.cep} placeholder="00000-000" onChange={(v) => setField("cep", v)} onBlur={handleCepBlur} />
             </FormField>
-            <FormField label="Endereço" htmlFor="forn-endereco">
+            <FormField label="Endereço" htmlFor="forn-endereco" hint="Rua vem do CEP — complete com o número.">
               <input id="forn-endereco" className="input" value={draft.endereco} placeholder="Rua, número" onChange={(e) => setField("endereco", e.target.value)} />
             </FormField>
             <FormField label="Cidade" htmlFor="forn-cidade">

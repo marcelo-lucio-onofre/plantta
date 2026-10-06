@@ -1,22 +1,79 @@
 import { useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
+import { Plus, Trash2 } from "lucide-react";
+import { Alert } from "../components/Alert";
 import { Breadcrumb } from "../components/Breadcrumb";
 import { NivelBadge } from "../components/Badge";
 import { Timeline } from "../components/Timeline";
+import { MoedaInput } from "../components/MaskedInput";
+import { useToast } from "../components/Toast";
 import { fmtBRL } from "../domain/calculations";
+import type { CustoExtra } from "../domain/types";
 import { useApp } from "../state/AppContext";
+import { useLoading } from "../state/LoadingContext";
+
+const gerarIdCusto = () => `custo-${Date.now()}-${Math.round(Math.random() * 10000)}`;
+
+/** Propostas de fornecedor chegam como texto livre do cliente ("R$ 1.200",
+ * "1200,00"...) — melhor esforço pra extrair um número, não uma validação
+ * financeira de verdade (fora de escopo do protótipo). */
+function parseValorLivre(v: string): number {
+  const limpo = v.replace(/[^\d,.-]/g, "");
+  const normalizado = limpo.includes(",") ? limpo.replace(/\./g, "").replace(",", ".") : limpo;
+  const n = Number(normalizado);
+  return Number.isFinite(n) ? n : 0;
+}
 
 export function AprovacaoPage() {
   const { id } = useParams<{ id: string }>();
-  const { solicitacoes, aprovarSolicitacao, recusarSolicitacao } = useApp();
+  const { solicitacoes, aprovarSolicitacao, recusarSolicitacao, registrarCustosExtras } = useApp();
+  const { runComLoading } = useLoading();
+  const toast = useToast();
   const [observacao, setObservacao] = useState("");
+  const [propostaEscolhida, setPropostaEscolhida] = useState<number | null>(null);
+  const [custosExtras, setCustosExtras] = useState<CustoExtra[]>([]);
 
   const solicitacao = solicitacoes.find((s) => s.id === id);
   if (!solicitacao) return <Navigate to="/painel" replace />;
 
+  const aguardandoPagamento = solicitacao.status === "aguardando_pagamento";
   const approved = solicitacao.status === "aprovado";
   const recusado = solicitacao.status === "recusado";
-  const resolvido = approved || recusado;
+  const resolvido = approved || recusado || aguardandoPagamento;
+  const materialProprio = solicitacao.materialProprio;
+  const custosExtrasFinais = resolvido ? (solicitacao.custosExtras ?? []) : custosExtras;
+  const valorMaterialFinal =
+    materialProprio && propostaEscolhida != null ? parseValorLivre(materialProprio.propostas[propostaEscolhida].valor) : 0;
+  const totalCustosExtras = custosExtrasFinais.reduce((n, c) => n + c.valor, 0);
+  const podeAprovar = !materialProprio || propostaEscolhida != null;
+
+  const solicitacaoId = solicitacao.id;
+  function handleAprovar() {
+    runComLoading(() => {
+      if (materialProprio && propostaEscolhida != null) {
+        registrarCustosExtras(solicitacaoId, valorMaterialFinal, custosExtras);
+      }
+      aprovarSolicitacao(solicitacaoId);
+    }, "Aprovando solicitação...").then(() => {
+      toast.success("Solicitação aprovada — aguardando pagamento do cliente.");
+    });
+  }
+
+  function handleRecusar() {
+    runComLoading(() => recusarSolicitacao(solicitacaoId), "Recusando solicitação...").then(() => {
+      toast.success("Solicitação recusada.");
+    });
+  }
+
+  function addCustoExtra() {
+    setCustosExtras((cs) => [...cs, { id: gerarIdCusto(), descricao: "", valor: 0 }]);
+  }
+  function atualizarCustoExtra(idc: string, patch: Partial<CustoExtra>) {
+    setCustosExtras((cs) => cs.map((c) => (c.id === idc ? { ...c, ...patch } : c)));
+  }
+  function removerCustoExtra(idc: string) {
+    setCustosExtras((cs) => cs.filter((c) => c.id !== idc));
+  }
 
   return (
     <div className="container">
@@ -43,6 +100,93 @@ export function AprovacaoPage() {
         </div>
       </div>
 
+      {materialProprio && (
+        <div className="card" style={{ marginBottom: 24, borderStyle: "dashed" }}>
+          <div className="row" style={{ justifyContent: "space-between", marginBottom: 14 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-soft)", textTransform: "uppercase" }}>Material próprio — decisão financeira</div>
+            <span className="badge badge--tecnico">Fora do catálogo</span>
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{materialProprio.materialNome}</div>
+          <div className="text-soft" style={{ fontSize: 12.5, marginBottom: 16 }}>Referência: {materialProprio.referencia}</div>
+
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-soft)", textTransform: "uppercase", marginBottom: 8 }}>
+            Escolha a proposta vencedora
+          </div>
+          <div className="stack gap-xs" style={{ marginBottom: 18 }}>
+            {materialProprio.propostas.map((p, i) => {
+              const sel = propostaEscolhida === i;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  disabled={resolvido}
+                  onClick={() => setPropostaEscolhida(i)}
+                  className="row"
+                  style={{
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "10px 14px",
+                    borderRadius: 8,
+                    border: sel ? "2px solid var(--brand)" : "1px solid var(--rule)",
+                    background: sel ? "var(--blue-bg)" : "var(--card)",
+                    cursor: resolvido ? "default" : "pointer",
+                    textAlign: "left",
+                  }}
+                >
+                  <span style={{ fontSize: 13.5, fontWeight: 600 }}>{p.fornecedor}</span>
+                  <span className="mono" style={{ fontSize: 13 }}>{p.valor}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="row" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-soft)", textTransform: "uppercase" }}>
+              Custos extras (mão de obra, instalação, frete...)
+            </div>
+            {!resolvido && (
+              <button type="button" className="btn btn--sm" onClick={addCustoExtra}>
+                <Plus className="sidebar-nav-icon" /> Custo extra
+              </button>
+            )}
+          </div>
+          {custosExtrasFinais.length === 0 && (
+            <div className="text-soft" style={{ fontSize: 12.5, marginBottom: 12 }}>Nenhum custo extra adicionado — só o valor da proposta escolhida.</div>
+          )}
+          <div className="stack gap-xs" style={{ marginBottom: 16 }}>
+            {custosExtrasFinais.map((c) => (
+              <div key={c.id} className="row gap-sm" style={{ alignItems: "center" }}>
+                {resolvido ? (
+                  <>
+                    <span style={{ flex: 1, fontSize: 13 }}>{c.descricao || "—"}</span>
+                    <span className="mono" style={{ fontSize: 13 }}>{fmtBRL(c.valor)}</span>
+                  </>
+                ) : (
+                  <>
+                    <input
+                      className="input"
+                      style={{ flex: 1, minWidth: 0 }}
+                      value={c.descricao}
+                      placeholder="Ex.: Mão de obra de instalação"
+                      onChange={(e) => atualizarCustoExtra(c.id, { descricao: e.target.value })}
+                    />
+                    <MoedaInput style={{ width: 140, flexShrink: 0 }} value={c.valor} onChange={(n) => atualizarCustoExtra(c.id, { valor: n })} />
+                    <button type="button" style={{ border: "none", background: "none", color: "var(--red-ink)", cursor: "pointer", padding: 4, flexShrink: 0 }} onClick={() => removerCustoExtra(c.id)} aria-label="Remover custo extra">
+                      <Trash2 className="sidebar-nav-icon" style={{ width: 14, height: 14 }} />
+                    </button>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="row" style={{ justifyContent: "space-between", paddingTop: 12, borderTop: "1px solid var(--rule)", fontWeight: 700, fontSize: 15 }}>
+            <span>Total a cobrar do cliente</span>
+            <span className="mono">{fmtBRL(resolvido ? (solicitacao.diferenca ?? 0) : valorMaterialFinal + totalCustosExtras)}</span>
+          </div>
+        </div>
+      )}
+
       {solicitacao.id === "SOL-003" && (
         <div className="card table-scroll" style={{ marginBottom: 24 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-soft)", textTransform: "uppercase", marginBottom: 12 }}>Cálculo paramétrico</div>
@@ -67,7 +211,18 @@ export function AprovacaoPage() {
         <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-soft)", textTransform: "uppercase", marginBottom: 14 }}>Linha do tempo</div>
         <Timeline events={solicitacao.timeline} />
         {solicitacao.status === "em_analise" && (
-          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--amber-ink)", marginTop: -4 }}>Aguardando parecer técnico</div>
+          <div style={{ marginTop: 10 }}>
+            <Alert variante="pendente" titulo="Aguardando parecer técnico">
+              O time técnico responde em até 2 dias úteis.
+            </Alert>
+          </div>
+        )}
+        {aguardandoPagamento && (
+          <div style={{ marginTop: 10 }}>
+            <Alert variante="info" titulo="Aguardando pagamento do cliente">
+              Aprovada tecnicamente — falta o cliente pagar pra virar "Aprovado" de fato.
+            </Alert>
+          </div>
         )}
       </div>
 
@@ -96,19 +251,26 @@ export function AprovacaoPage() {
         <div className="row gap-sm">
           <button
             type="button"
-            className="btn"
-            style={approved ? { background: "var(--green-bg)", color: "var(--green-ink)", border: "none" } : { background: "var(--green)", color: "#fff", border: "none" }}
-            disabled={resolvido}
-            onClick={() => aprovarSolicitacao(solicitacao.id)}
+            className={resolvido && !recusado ? "btn" : "btn btn--confirm"}
+            style={
+              approved
+                ? { background: "var(--green-bg)", color: "var(--green-ink)", border: "none" }
+                : aguardandoPagamento
+                  ? { background: "var(--blue-bg)", color: "var(--blue-strong)", border: "none" }
+                  : undefined
+            }
+            disabled={resolvido || !podeAprovar}
+            title={!podeAprovar ? "Escolha a proposta vencedora do material próprio antes de aprovar" : undefined}
+            onClick={handleAprovar}
           >
-            {approved ? "Aprovado ✓" : "Aprovar com assinatura digital"}
+            {approved ? "Aprovado ✓" : aguardandoPagamento ? "Aguardando pagamento" : "Aprovar com assinatura digital"}
           </button>
           <button type="button" className="btn" disabled={resolvido}>Solicitar informação adicional</button>
           <button
             type="button"
             className="btn btn--danger-text"
             disabled={resolvido}
-            onClick={() => recusarSolicitacao(solicitacao.id)}
+            onClick={handleRecusar}
           >
             {recusado ? "Recusado" : "Recusar com justificativa"}
           </button>

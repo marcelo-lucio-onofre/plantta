@@ -17,15 +17,18 @@ const iniciais = (nome: string): string =>
  */
 export function ConstrutoraMark({ nome, brand, size = 30 }: { nome: string; brand: Brand | null | undefined; size?: number }) {
   const radius = Math.round(size * 0.27);
-  if (brand?.logo) {
+  // Ícone (favicon), não a logomarca — o chip é pequeno/quadrado e o logo
+  // grande do hero costuma ser largo, não coube bem aqui.
+  const imagem = brand?.favicon ?? brand?.logo;
+  if (imagem) {
     return (
       <span
         style={{
           width: size, height: size, borderRadius: radius, flexShrink: 0,
-          background: "var(--navy)", display: "flex", alignItems: "center", justifyContent: "center",
+          background: brand?.color ?? "var(--navy)", display: "flex", alignItems: "center", justifyContent: "center",
         }}
       >
-        <img src={brand.logo} alt={nome} style={{ maxWidth: size - 8, maxHeight: size - 8, objectFit: "contain" }} />
+        <img src={imagem} alt={nome} style={{ maxWidth: size - 8, maxHeight: size - 8, objectFit: "contain" }} />
       </span>
     );
   }

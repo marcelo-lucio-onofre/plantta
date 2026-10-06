@@ -1,33 +1,39 @@
-/* Design tokens. Warm, paper-and-graphite palette — a construction
-   personalization tool lives closer to blueprints and material samples
-   (concrete, porcelain, timber) than to generic blue-navy SaaS chrome, so
-   the neutrals lean warm instead of blue-tinted and the signature green is
-   a muted safety-green rather than a saturated emerald. IBM Plex Sans +
-   IBM Plex Mono throughout — one type family, two jobs (prose/UI vs.
-   data/numbers), chosen because Plex's whole design brief was technical
-   documentation, which is what this product turns loose conversations
-   into. */
+/* Design tokens — plantta rebrand (kit "Marca B2B/B2C forte"). Warm,
+   paper-and-graphite neutrals stay (blueprint/memorial-descritivo territory,
+   not generic SaaS chrome); the new brand accent is blue (--blue), reserved
+   for marca/ação-de-marca, while green stays strictly functional (crédito,
+   aprovado) — never decorative. Archivo Expanded (display/títulos) + Archivo
+   (corpo/UI) + JetBrains Mono (dados/números/IDs) replace IBM Plex. Both a
+   light (--paper, default) and a dark theme ship — toggled via
+   `[data-theme="dark"]` — because the marca agora vive no escuro (landing,
+   social) mesmo com o produto em si permanecendo claro por padrão. */
 :root {
-  --ink: oklch(20% 0.012 95);
-  --ink-soft: oklch(50% 0.010 90);
-  --ink-softer: oklch(60% 0.010 90);
-  --paper: oklch(97% 0.007 85);
-  --paper-2: oklch(93% 0.008 85);
-  --rule: oklch(90% 0.010 85);
-  --rule-strong: oklch(86% 0.012 85);
+  --paper: #f6f3ec;
+  --paper-2: #ece7db;
   --card: #fffdf9;
-  --navy: oklch(19% 0.014 85);
-  --navy-2: oklch(30% 0.014 85);
+  --ink: #211d16;
+  --ink-soft: #6b6459;
+  --ink-softer: #938c7e;
+  --rule: #e4dfd2;
+  --rule-strong: #d3ccbb;
 
-  --green: oklch(50% 0.10 155);
-  --green-ink: oklch(38% 0.09 155);
-  --green-bg: oklch(94% 0.035 155);
+  --navy: #0d1420;
+  --navy-2: #1e2d44;
 
-  --amber-ink: oklch(42% 0.12 75);
-  --amber-bg: oklch(94% 0.05 75);
+  --blue: #2f6bd8;
+  --blue-strong: #24539f;
+  --blue-bg: #e7effc;
+  --on-blue: #ffffff;
 
-  --red-ink: oklch(42% 0.12 25);
-  --red-bg: oklch(94% 0.05 25);
+  --green: #3f9668;
+  --green-ink: #2c6b4b;
+  --green-bg: #e4f2ea;
+
+  --amber-ink: #8a6410;
+  --amber-bg: #f6ecd4;
+
+  --red-ink: #a83326;
+  --red-bg: #f8e4e0;
 
   --violet-bg: oklch(95% 0.035 260);
   --violet-ink: oklch(42% 0.12 260);
@@ -42,14 +48,54 @@
   --alert-banner-bg: oklch(95% 0.03 40);
   --alert-banner-rule: oklch(80% 0.08 40);
 
-  --brand: var(--green);
+  --brand: var(--blue);
+
+  /* plantta's own "tt" — the icon is a navy badge with a gray mark, so the
+     wordmark's "tt" repeats that gray instead of the old --blue, to read
+     as one signature (see BrandMark.tsx). */
+  --plantta-tt: #767f8c;
 
   --radius-sm: 6px;
   --radius: 10px;
-  --radius-lg: 14px;
+  --radius-lg: 16px;
   --gap: 16px;
+  --shadow: 0 14px 40px rgba(40, 30, 12, 0.14);
 
   color-scheme: light;
+}
+
+/* Not scoped to :root — SidebarShell sets this attribute on .portal-shell
+   (a descendant div), not <html>, so the selector must match any element
+   carrying it; the custom properties then cascade to everything inside. */
+[data-theme="dark"] {
+  --paper: #0d1420;
+  --paper-2: #131d2d;
+  --card: #111b2a;
+  --ink: #eef4fb;
+  --ink-soft: #9db1c9;
+  --ink-softer: #6f89a8;
+  --rule: #1e2d44;
+  --rule-strong: #2b3f5c;
+
+  --blue: #4f9bff;
+  --blue-strong: #7fb2ff;
+  --blue-bg: #14294a;
+  --on-blue: #ffffff;
+
+  --green: #46c088;
+  --green-ink: #8fe3ba;
+  --green-bg: #0f2a20;
+
+  --amber-ink: #e2b25a;
+  --amber-bg: #2c2410;
+
+  --red-ink: #f0968b;
+  --red-bg: #2e1512;
+
+  --plantta-tt: #9aa2ad;
+
+  --shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
 }
 
 * {
@@ -65,17 +111,27 @@ body {
 body {
   background: var(--paper);
   color: var(--ink);
-  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  font-family: "Archivo", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
+  transition: background 0.35s ease, color 0.35s ease;
 }
 
 .mono {
-  font-family: "IBM Plex Mono", monospace;
+  font-family: "JetBrains Mono", monospace;
+}
+
+.display {
+  font-family: "Archivo Expanded", "Archivo", sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.015em;
 }
 
 a {
-  color: var(--green);
+  color: var(--blue);
+}
+a:hover {
+  color: var(--blue-strong);
 }
 
 img {
@@ -88,12 +144,28 @@ h3,
 p {
   margin: 0;
 }
+h1,
+h2,
+h3 {
+  font-family: "Archivo Expanded", "Archivo", sans-serif;
+}
 
 button,
 input,
 textarea,
 select {
   font-family: inherit;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* ---------- layout ---------- */
@@ -181,7 +253,7 @@ select {
 
 .badge {
   display: inline-block;
-  font: 600 10px "IBM Plex Sans", sans-serif;
+  font: 600 10px "Archivo", sans-serif;
   padding: 3px 8px;
   border-radius: 5px;
   white-space: nowrap;
@@ -189,6 +261,7 @@ select {
 .badge--simples { color: var(--green-ink); background: var(--green-bg); }
 .badge--tecnico { color: var(--amber-ink); background: var(--amber-bg); }
 .badge--bloqueado { color: var(--red-ink); background: var(--red-bg); }
+.badge--info { color: var(--blue-strong); background: var(--blue-bg); }
 
 .btn {
   display: inline-flex;
@@ -196,26 +269,59 @@ select {
   justify-content: center;
   gap: 6px;
   padding: 12px 22px;
-  border-radius: 8px;
+  border-radius: var(--radius);
   border: 1px solid var(--rule-strong);
-  background: #fff;
+  background: var(--card);
   color: var(--ink);
-  font: 600 14px "IBM Plex Sans", sans-serif;
+  font: 600 14px "Archivo", sans-serif;
   cursor: pointer;
   text-decoration: none;
-  min-height: 44px;
+  min-height: 46px;
   line-height: 1;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.12s ease, filter 0.2s ease;
+}
+.btn:hover:not(:disabled) {
+  border-color: var(--blue);
+  background: var(--blue-bg);
 }
 .btn:disabled {
   cursor: not-allowed;
-  opacity: 0.5;
+  opacity: 0.45;
 }
+/* Ação de marca — segue --brand (plantta azul por padrão, ou a cor da
+   construtora quando white-label; ver design.md §6). */
 .btn--primary {
   border: none;
   background: var(--brand);
+  color: var(--on-blue, #fff);
+}
+.btn--primary:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--brand);
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+/* Confirmação/crédito — sempre verde, nunca segue a marca (design.md §1:
+   "verde funcional, nunca decorativo"). */
+.btn--confirm {
+  border: none;
+  background: var(--green);
   color: #fff;
 }
+.btn--confirm:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--green);
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
 .btn--danger-text {
+  color: var(--red-ink);
+  background: transparent;
+  border-color: transparent;
+}
+.btn--danger-text:hover:not(:disabled) {
+  background: var(--red-bg);
+  border-color: transparent;
   color: var(--red-ink);
 }
 .btn--sm {
@@ -231,19 +337,81 @@ select {
 textarea.input,
 select.input {
   width: 100%;
-  padding: 10px 12px;
+  min-height: 46px;
+  padding: 10px 13px;
   border: 1px solid var(--rule-strong);
-  border-radius: 8px;
-  font-size: 14px;
-  font-family: "IBM Plex Sans", sans-serif;
-  background: #fff;
+  border-radius: var(--radius);
+  font-size: 14.5px;
+  font-family: "Archivo", sans-serif;
+  background: var(--paper);
   color: var(--ink);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+textarea.input {
+  min-height: 80px;
+}
+select.input {
+  cursor: pointer;
+}
+.input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px var(--blue-bg);
+}
+.input--invalid:focus {
+  border-color: var(--red-ink);
+  box-shadow: 0 0 0 3px var(--red-bg);
 }
 .label {
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 600;
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 7px;
+}
+
+/* ---------- checkbox ---------- */
+/* Reskin global via appearance:none — pega todo checkbox nativo do app
+   (Pessoa.papeis, aceite de risco em material próprio, "Remoção" de
+   opção...) sem precisar de um componente novo em cada tela. */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  border-radius: 6px;
+  border: 2px solid var(--rule-strong);
+  background: var(--card);
+  display: inline-block;
+  position: relative;
+  vertical-align: middle;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin: 0;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+input[type="checkbox"]:checked {
+  background: var(--blue);
+  border-color: var(--blue);
+}
+input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+input[type="checkbox"]:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .table-scroll {
@@ -251,40 +419,9 @@ select.input {
   -webkit-overflow-scrolling: touch;
 }
 
-/* ---------- app shell / nav ---------- */
-.appbar {
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  background: var(--navy);
-  padding: 10px 14px;
-  padding-top: max(10px, env(safe-area-inset-top));
-}
-.appbar-inner {
-  max-width: 1200px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.brandmark {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  color: #fff;
-  text-decoration: none;
-  flex-shrink: 0;
-}
-.brandmark span {
-  font-size: 17px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
-
-.nav-desktop {
-  display: none;
-}
+/* ---------- app shell / nav (mobile drawer toggle, shared by
+   SidebarShell — the landing/marketing nav below has its own inline
+   markup, it doesn't reuse this) ---------- */
 .nav-toggle {
   margin-left: auto;
   background: transparent;
@@ -292,55 +429,8 @@ select.input {
   color: #fff;
   border-radius: 7px;
   padding: 8px 10px;
-  min-height: 40px;
-}
-
-@media (min-width: 860px) {
-  .nav-desktop {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    overflow-x: auto;
-    flex: 1;
-  }
-  .nav-toggle {
-    display: none;
-  }
-}
-
-.nav-divider {
-  width: 1px;
-  height: 22px;
-  background: var(--navy-2);
-  margin: 0 6px;
-  flex-shrink: 0;
-}
-.nav-group-label {
-  font-size: 9px;
-  font-weight: 700;
-  color: var(--green);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  padding: 0 6px;
-  flex-shrink: 0;
-}
-.nav-btn {
-  padding: 8px 12px;
-  border-radius: 6px;
-  font: 600 12.5px "IBM Plex Sans", sans-serif;
-  cursor: pointer;
-  border: none;
-  white-space: nowrap;
-  background: transparent;
-  color: oklch(75% 0.01 90);
-  text-decoration: none;
-  display: inline-flex;
-  min-height: 40px;
-  align-items: center;
-}
-.nav-btn.active {
-  background: var(--green);
-  color: #fff;
+  min-height: 44px;
+  min-width: 44px;
 }
 
 .nav-drawer-backdrop {
@@ -348,25 +438,6 @@ select.input {
   inset: 0;
   background: rgba(10, 14, 20, 0.5);
   z-index: 50;
-}
-.nav-drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: min(300px, 84vw);
-  background: var(--navy);
-  z-index: 51;
-  padding: 16px;
-  padding-top: max(16px, env(safe-area-inset-top));
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  overflow-y: auto;
-}
-.nav-drawer .nav-btn {
-  width: 100%;
-  justify-content: flex-start;
 }
 .nav-drawer-close {
   align-self: flex-end;
@@ -376,10 +447,11 @@ select.input {
   font-size: 22px;
   padding: 6px 10px;
   cursor: pointer;
+  min-height: 44px;
+  min-width: 44px;
 }
 
 @media (min-width: 860px) {
-  .nav-drawer,
   .nav-drawer-backdrop {
     display: none;
   }
@@ -390,6 +462,14 @@ select.input {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  /* `body`'s own `background: var(--paper)` can never see this element's
+     `data-theme="dark"` override — custom properties only cascade to
+     descendants, never back up to an ancestor. Without repainting here,
+     dark mode leaves `body`'s light background showing through every gap
+     between opaque cards/tables (which DO sit inside the dark scope and
+     resolve correctly), producing a broken light-canvas/dark-island mix. */
+  background: var(--paper);
+  color: var(--ink);
 }
 .portal-body {
   display: flex;
@@ -598,7 +678,7 @@ select.input {
   border-left: 3px solid transparent;
   background: transparent;
   color: rgba(255, 255, 255, 0.65);
-  font: 600 13px "IBM Plex Sans", sans-serif;
+  font: 600 13px "Archivo", sans-serif;
   text-decoration: none;
   cursor: pointer;
   min-height: 38px;
@@ -685,7 +765,7 @@ select.input {
   border: none;
   background: transparent;
   color: rgba(255, 255, 255, 0.5);
-  font: 600 12.5px "IBM Plex Sans", sans-serif;
+  font: 600 12.5px "Archivo", sans-serif;
   cursor: pointer;
   width: 100%;
   text-align: left;
@@ -730,10 +810,28 @@ select.input {
   color: var(--ink-soft);
   white-space: nowrap;
 }
+.table-sort-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.table-sort-icon {
+  opacity: 0.35;
+}
+.table th:hover .table-sort-icon {
+  opacity: 0.7;
+}
 .table td {
   padding: 12px 18px;
-  border-top: 1px solid var(--paper-2);
+  border-top: 1px solid var(--rule);
   vertical-align: middle;
+  white-space: nowrap;
+}
+.table-card {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
 .table tbody tr:hover td {
   background: var(--paper);
@@ -784,7 +882,7 @@ select.input {
   justify-content: space-between;
   gap: 12px;
   padding: 12px 18px;
-  border-top: 1px solid var(--paper-2);
+  border-top: 1px solid var(--rule);
   font-size: 12.5px;
   color: var(--ink-soft);
 }
@@ -804,11 +902,35 @@ select.input {
 /* ---------- form validation ---------- */
 .field-error {
   color: var(--red-ink);
-  font-size: 12px;
-  margin-top: 5px;
+  font-size: 12.5px;
+  margin-top: 6px;
+  animation: fadeUp 0.2s ease;
 }
 .input--invalid {
   border-color: var(--red-ink);
+}
+.field-valid-check {
+  position: absolute;
+  right: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--green-ink);
+  font-weight: 700;
+}
+
+/* ---------- autocomplete (SugestaoInput) ---------- */
+.sugestao-item {
+  padding: 11px 14px;
+  font: 500 14px "Archivo", sans-serif;
+  color: var(--ink);
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+.sugestao-item:hover {
+  background: var(--blue-bg);
+  color: var(--blue-strong);
 }
 
 /* ---------- badges (neutral, non-semantic status) ---------- */
@@ -834,7 +956,7 @@ select.input {
   max-width: 480px;
   max-height: calc(100vh - 40px);
   overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(30, 22, 10, 0.25);
+  box-shadow: var(--shadow);
 }
 .modal-eyebrow {
   font-size: 10.5px;
@@ -865,20 +987,20 @@ select.input {
   z-index: 80;
   display: flex;
   flex-direction: column-reverse;
-  gap: 10px;
-  max-width: min(360px, calc(100vw - 32px));
+  gap: 12px;
+  max-width: min(400px, calc(100vw - 32px));
 }
 .toast {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 14px;
   background: var(--card);
   border: 1px solid var(--rule);
-  border-left: 3px solid var(--green);
-  border-radius: var(--radius);
-  padding: 12px 14px;
-  font-size: 13px;
-  box-shadow: 0 12px 30px rgba(30, 22, 10, 0.18);
+  border-left: 4px solid var(--green);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  box-shadow: var(--shadow);
+  animation: fadeUp 0.25s ease;
 }
 .toast--error {
   border-left-color: var(--red-ink);
@@ -886,14 +1008,15 @@ select.input {
 .toast-icon {
   flex-shrink: 0;
   margin-top: 1px;
-}
-.toast--error .toast-icon {
-  color: var(--red-ink);
-}
-.toast--success .toast-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--green-bg);
   color: var(--green-ink);
 }
-
 /* ---------- Minhas personalizações (árvore unificada) ----------
    Construtora → Empreendimento → Unidade → Ambiente → Item, ver
    PersonalizacoesPage. */
@@ -1143,5 +1266,86 @@ select.input {
 @media (max-width: 720px) {
   .mp-termo-cabecalho {
     grid-template-columns: 1fr;
+  }
+}
+
+.toast--error .toast-icon {
+  background: var(--red-bg);
+  color: var(--red-ink);
+}
+.toast-title {
+  font: 700 15px "Archivo", sans-serif;
+  color: var(--ink);
+  margin-bottom: 2px;
+}
+.toast-message {
+  font: 400 13.5px "Archivo", sans-serif;
+  color: var(--ink-soft);
+  line-height: 1.4;
+}
+.toast-close {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--ink-softer);
+  cursor: pointer;
+  padding: 2px;
+  margin: -2px -4px 0 0;
+  border-radius: 6px;
+}
+.toast-close:hover {
+  background: var(--paper-2);
+  color: var(--ink);
+}
+
+/* ---------- loading overlay ---------- */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: color-mix(in srgb, var(--paper) 85%, transparent);
+  backdrop-filter: blur(2px);
+  animation: fadeUp 0.15s ease;
+}
+.loading-ring {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  border: 2px solid var(--blue-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: loading-pulse 1.6s ease-in-out infinite;
+}
+.loading-logo {
+  animation: loading-logo-pulse 1.6s ease-in-out infinite;
+}
+.loading-message {
+  font: 600 13px "Archivo", sans-serif;
+  color: var(--ink-soft);
+}
+@keyframes loading-logo-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(0.82);
+    opacity: 0.7;
+  }
+}
+@keyframes loading-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--blue-bg);
+  }
+  50% {
+    box-shadow: 0 0 0 10px transparent;
   }
 }

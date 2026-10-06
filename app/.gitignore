@@ -11,6 +11,8 @@ node_modules
 dist
 dist-ssr
 *.local
+.env
+.env.local
 
 # Matéria-prima do pipeline de compressão (scripts/compress-model.mjs) —
 # regenerada com `node scripts/fetch-sample-assets.mjs`, não é o asset

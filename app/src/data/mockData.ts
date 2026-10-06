@@ -14,10 +14,12 @@ import type {
   Planta,
   PlantaGeometria3D,
   Solicitacao,
+  TipoAmbiente,
+  TipoPapel,
   Vinculo,
 } from "../domain/types";
 import { plantaKey } from "../domain/calculations";
-import { CATEGORIAS_MATERIAL, MARCAS_SUGERIDAS } from "../domain/catalogoReferencia";
+import { AMBIENTES_SUGERIDOS, CATEGORIAS_MATERIAL, MARCAS_SUGERIDAS } from "../domain/catalogoReferencia";
 import { parseDxfAmbientes } from "../lib/dxfPlanta";
 import dxfSala from "../assets/plantas-dxf/sala.dxf?raw";
 import dxfCozinha from "../assets/plantas-dxf/cozinha.dxf?raw";
@@ -81,8 +83,21 @@ function clonar<T>(value: T): T {
 // (branded login → branded portal). Editable on the Marca screen.
 export const initialBrand: Brand = {
   nome: "Alliance",
+  slug: "alliance",
   color: "#fd3541",
   logo: "https://alliance.com.br/wp-content/uploads/2026/01/logo-alliance-ok.png",
+  background: "https://alliance.com.br/wp-content/uploads/2025/11/Copia-de-Guarita-1.jpg",
+  favicon: "/brand/alliance-favicon.jpg",
+};
+
+// Prado's own brand — this construtora ("00001") is now Engemax.
+export const engemaxBrand: Brand = {
+  nome: "Engemax",
+  slug: "engemax",
+  color: "#35492e",
+  logo: "/brand/engemax-logo.png",
+  background: "/brand/engemax-background.jpg",
+  favicon: "/brand/engemax-logo.jpg",
 };
 
 // plantta's own brand — used everywhere the client portal is NOT
@@ -90,19 +105,34 @@ export const initialBrand: Brand = {
 // construtora back-office.
 export const planttaBrand: Brand = {
   nome: "plantta",
-  color: "#2e9e68",
+  slug: "plantta",
+  color: "#2f6bd8",
   logo: null,
+  background: null,
+  favicon: null,
+};
+
+// construtoraId → seed brand, opted into white-label. Single source used
+// both by InMemoryBrandRepository and by the dev-server OG-preview
+// middleware (vite.config.ts) — that middleware runs in Node, before any
+// browser JS, so it can only ever see this seed data, never brand edits
+// made live through MarcaPage (those stay in-memory, browser-only, same
+// as every other piece of state in this prototype).
+export const SEED_BRANDS: Record<string, Brand> = {
+  "00001": engemaxBrand,
+  "00003": initialBrand,
 };
 
 export const empreendimento: Empreendimento = {
-  nome: "Residencial Aurora",
-  construtora: "Prado Engenharia",
+  nome: "Canoa",
+  construtora: "Engemax",
   unidade: "Apto 1204",
   torre: "Torre B",
   comprador: "Marina Alves",
   cpf: "•••.•••.•••-89",
   totalUnidades: 300,
   valorImovel: 850000,
+  imagemUrl: "/empreendimentos/canoa.jpg",
 };
 
 // Second empreendimento for the same client, at a different construtora —
@@ -118,6 +148,48 @@ export const empreendimentoVistaVerde: Empreendimento = {
   cpf: "•••.•••.•••-89",
   totalUnidades: 180,
   valorImovel: 720000,
+};
+
+// Unidade nova, sem nenhuma solicitação ainda ("nenhuma personalização") —
+// pra "Minhas unidades" mostrar todo status possível na apresentação.
+export const empreendimentoVistaVerdeNova: Empreendimento = {
+  nome: "Vista Verde Residence",
+  construtora: "Horizonte Construções",
+  unidade: "Apto 1502",
+  torre: "Torre B",
+  comprador: "Marina Alves",
+  cpf: "•••.•••.•••-89",
+  totalUnidades: 180,
+  valorImovel: 650000,
+};
+
+// Unidade que o cliente já declarou "não vou alterar" — cobre o status
+// "Sem alteração" na demo.
+export const empreendimentoAuroraSemAlteracao: Empreendimento = {
+  nome: "Canoa",
+  construtora: "Engemax",
+  unidade: "Apto 305",
+  torre: "Torre A",
+  comprador: "Marina Alves",
+  cpf: "•••.•••.•••-89",
+  totalUnidades: 300,
+  valorImovel: 780000,
+  imagemUrl: "/empreendimentos/canoa.jpg",
+};
+
+// Segundo empreendimento da Engemax — cobre um cliente com dois
+// empreendimentos na mesma construtora ("Minhas personalizações" empilha
+// os dois embaixo do mesmo grupo Engemax).
+export const empreendimentoJangada: Empreendimento = {
+  nome: "Jangada",
+  construtora: "Engemax",
+  unidade: "Apto 402",
+  torre: "Única",
+  comprador: "Marina Alves",
+  cpf: "•••.•••.•••-89",
+  totalUnidades: 120,
+  valorImovel: 690000,
+  imagemUrl: "/empreendimentos/jangada.jpg",
 };
 
 // A third construtora — Alliance itself (its real brand, not a demo
@@ -157,7 +229,7 @@ export const empreendimentoAllianceBoulevard1502: Empreendimento = {
 
 export const empreendimentoAllianceJardins: Empreendimento = {
   nome: "Alliance Jardins",
-  construtora: "Alliance",
+  construtora: "Engemax",
   unidade: "Apto 302",
   torre: "Única",
   comprador: "Marina Alves",
@@ -174,14 +246,14 @@ export const vinculos: Vinculo[] = [
   {
     id: "v-aurora-1204",
     construtoraId: "00001",
-    construtoraNome: "Prado Engenharia",
+    construtoraNome: "Engemax",
     empreendimentoId: "00001",
-    empreendimentoNome: "Residencial Aurora",
+    empreendimentoNome: "Canoa",
     plantaId: "planta-a",
     plantaNome: "Planta A — 2 quartos",
     unidadeLabel: "Apto 1204",
     torre: "B",
-    brand: null,
+    brand: engemaxBrand,
   },
   {
     id: "v-vistaverde-2201",
@@ -230,6 +302,48 @@ export const vinculos: Vinculo[] = [
     unidadeLabel: "Apto 302",
     torre: "Única",
     brand: initialBrand,
+    // Já aprovado E pago — cobre "Concluído" (memorial liberado) na demo.
+    pagamentoConfirmadoEm: "2026-08-21T10:00:00-03:00",
+  },
+  {
+    id: "v-vistaverde-1502",
+    construtoraId: "00002",
+    construtoraNome: "Horizonte Construções",
+    empreendimentoId: "00002",
+    empreendimentoNome: "Vista Verde Residence",
+    plantaId: "planta-unica",
+    plantaNome: "Planta Única",
+    unidadeLabel: "Apto 1502",
+    torre: "B",
+    brand: null,
+    // Sem nenhuma solicitação ainda — cobre "Nenhuma personalização".
+  },
+  {
+    id: "v-aurora-305",
+    construtoraId: "00001",
+    construtoraNome: "Engemax",
+    empreendimentoId: "00001",
+    empreendimentoNome: "Canoa",
+    plantaId: "planta-a",
+    plantaNome: "Planta A — 2 quartos",
+    unidadeLabel: "Apto 305",
+    torre: "A",
+    brand: engemaxBrand,
+    // Cliente já declarou que não vai alterar — cobre "Sem alteração".
+    semAlteracaoAssinadaEm: "2026-09-05T14:00:00-03:00",
+    semAlteracaoAssinadaPor: "marina.alves@email.com",
+  },
+  {
+    id: "v-jangada-402",
+    construtoraId: "00001",
+    construtoraNome: "Engemax",
+    empreendimentoId: "00005",
+    empreendimentoNome: "Jangada",
+    plantaId: "planta-unica",
+    plantaNome: "Planta Única",
+    unidadeLabel: "Apto 402",
+    torre: "Única",
+    brand: engemaxBrand,
   },
 ];
 
@@ -651,6 +765,9 @@ export const categoriasIniciais: Categoria[] = CONSTRUTORA_IDS.flatMap((construt
 export const marcasIniciais: Marca[] = CONSTRUTORA_IDS.flatMap((construtoraId) =>
   MARCAS_SUGERIDAS.map((nome, i) => ({ id: `marca-${construtoraId}-${i}`, construtoraId, nome })),
 );
+export const ambientesIniciais: TipoAmbiente[] = CONSTRUTORA_IDS.flatMap((construtoraId) =>
+  AMBIENTES_SUGERIDOS.map((nome, i) => ({ id: `amb-${construtoraId}-${i}`, construtoraId, nome })),
+);
 
 function categoriaId(construtoraId: string, nome: string): string {
   return categoriasIniciais.find((c) => c.construtoraId === construtoraId && c.nome === nome)!.id;
@@ -669,6 +786,36 @@ export const fornecedoresIniciais: Fornecedor[] = [
   { id: "forn-005", construtoraId: "00003", razaoSocial: "Portobello Distribuidora SP Ltda", nomeFantasia: "Portobello Distribuidora SP", cnpjCpf: "12.345.678/0001-90", responsavel: "Renata Souza", telefone: "(11) 3345-2200", whatsapp: "(11) 98811-2200", email: "comercial@portobellosp.com.br", cep: "04571-000", endereco: "Av. Eng. Luís Carlos Berrini, 1200", cidade: "São Paulo", uf: "SP" },
   { id: "forn-006", construtoraId: "00003", razaoSocial: "Silestone Brasil Comércio Ltda", nomeFantasia: "Silestone Brasil", cnpjCpf: "56.789.012/0001-34", responsavel: "Camila Teixeira", telefone: "(11) 3777-9900", whatsapp: "(11) 98855-9900", email: "vendas@silestonebrasil.com.br", cep: "06454-000", endereco: "Al. Tocantins, 350", cidade: "Barueri", uf: "SP" },
   { id: "forn-007", construtoraId: "00002", razaoSocial: "Portobello Distribuidora SP Ltda", nomeFantasia: "Portobello Distribuidora SP", cnpjCpf: "12.345.678/0001-90", responsavel: "Renata Souza", telefone: "(11) 3345-2200", whatsapp: "(11) 98811-2200", email: "comercial@portobellosp.com.br", cep: "04571-000", endereco: "Av. Eng. Luís Carlos Berrini, 1200", cidade: "São Paulo", uf: "SP" },
+
+  // 00001 (Prado Engenharia) — mais fornecedores, cobrindo revestimento,
+  // louças, metais, pintura e planejados.
+  { id: "forn-008", construtoraId: "00001", razaoSocial: "Eliane Revestimentos Comércio Ltda", nomeFantasia: "Eliane Revestimentos", cnpjCpf: "67.890.123/0001-45", responsavel: "Fábio Cardoso", telefone: "(11) 3221-3300", whatsapp: "(11) 98866-3300", email: "comercial@elianesp.com.br", cep: "04547-000", endereco: "Av. Ibirapuera, 2500", cidade: "São Paulo", uf: "SP" },
+  { id: "forn-009", construtoraId: "00001", razaoSocial: "Roca Louças e Metais Brasil Ltda", nomeFantasia: "Roca Brasil", cnpjCpf: "78.901.234/0001-56", responsavel: "Sandra Nogueira", telefone: "(11) 3221-4400", whatsapp: "(11) 98877-4400", email: "vendas@rocabrasilsp.com.br", cep: "04578-000", endereco: "R. Verbo Divino, 1400", cidade: "São Paulo", uf: "SP" },
+  { id: "forn-010", construtoraId: "00001", razaoSocial: "Hydra Metais Comércio Ltda", nomeFantasia: "Hydra Metais", cnpjCpf: "89.012.345/0001-67", responsavel: "Rogério Batista", telefone: "(11) 3221-5500", whatsapp: "(11) 98888-5500", email: "comercial@hydrasp.com.br", cep: "04552-000", endereco: "Av. Santo Amaro, 900", cidade: "São Paulo", uf: "SP" },
+  { id: "forn-011", construtoraId: "00001", razaoSocial: "Suvinil Tintas Distribuidora Ltda", nomeFantasia: "Suvinil Tintas SP", cnpjCpf: "90.123.456/0001-78", responsavel: "Vera Lins", telefone: "(11) 3221-6600", whatsapp: "(11) 98899-6600", email: "vendas@suviniltintassp.com.br", cep: "04566-000", endereco: "Av. Chucri Zaidan, 700", cidade: "São Paulo", uf: "SP" },
+  { id: "forn-012", construtoraId: "00001", razaoSocial: "Todeschini Móveis Planejados SP Ltda", nomeFantasia: "Todeschini SP", cnpjCpf: "01.234.567/0001-89", responsavel: "Cláudio Ferraz", telefone: "(11) 3221-7700", whatsapp: "(11) 98900-7700", email: "comercial@todeschinisp.com.br", cep: "04533-000", endereco: "R. Funchal, 300", cidade: "São Paulo", uf: "SP" },
+
+  // 00002 (Horizonte Construções, Campinas) — mesma cobertura, fornecedores
+  // regionais próprios.
+  { id: "forn-013", construtoraId: "00002", razaoSocial: "Portinari Revestimentos Campinas Ltda", nomeFantasia: "Portinari Campinas", cnpjCpf: "12.345.679/0001-91", responsavel: "Adriana Melo", telefone: "(19) 3232-2200", whatsapp: "(19) 98811-2200", email: "comercial@portinaricampinas.com.br", cep: "13010-000", endereco: "Av. Norte-Sul, 1500", cidade: "Campinas", uf: "SP" },
+  { id: "forn-014", construtoraId: "00002", razaoSocial: "Deca Metais e Louças Campinas Ltda", nomeFantasia: "Deca Campinas", cnpjCpf: "23.456.780/0001-02", responsavel: "Wagner Rocha", telefone: "(19) 3232-3300", whatsapp: "(19) 98822-3300", email: "vendas@decacampinas.com.br", cep: "13025-000", endereco: "R. Barão de Jaguara, 800", cidade: "Campinas", uf: "SP" },
+  { id: "forn-015", construtoraId: "00002", razaoSocial: "Fabrimar Metais Sanitários Ltda", nomeFantasia: "Fabrimar Campinas", cnpjCpf: "34.567.891/0001-13", responsavel: "Simone Vieira", telefone: "(19) 3232-4400", whatsapp: "(19) 98833-4400", email: "comercial@fabrimarcampinas.com.br", cep: "13070-000", endereco: "Av. Aquidaban, 400", cidade: "Campinas", uf: "SP" },
+  { id: "forn-016", construtoraId: "00002", razaoSocial: "Eucatex Painéis e Madeiras Ltda", nomeFantasia: "Eucatex Campinas", cnpjCpf: "45.678.902/0001-24", responsavel: "Alexandre Duarte", telefone: "(19) 3232-5500", whatsapp: "(19) 98844-5500", email: "vendas@eucatexcampinas.com.br", cep: "13084-000", endereco: "R. Conceição, 1200", cidade: "Campinas", uf: "SP" },
+  { id: "forn-017", construtoraId: "00002", razaoSocial: "Coral Tintas Distribuidora Ltda", nomeFantasia: "Coral Tintas Campinas", cnpjCpf: "56.789.013/0001-35", responsavel: "Priscila Gomes", telefone: "(19) 3232-6600", whatsapp: "(19) 98855-6600", email: "comercial@coraltintascampinas.com.br", cep: "13091-000", endereco: "Av. José Rocha Bonfim, 600", cidade: "Campinas", uf: "SP" },
+
+  // 00003 (Alliance) — mesma cobertura, mais argamassa/rejunte e cuba.
+  { id: "forn-018", construtoraId: "00003", razaoSocial: "Incepa Revestimentos Cerâmicos Ltda", nomeFantasia: "Incepa SP", cnpjCpf: "67.890.124/0001-46", responsavel: "Otávio Ramalho", telefone: "(11) 3777-2200", whatsapp: "(11) 98811-7700", email: "comercial@incepasp.com.br", cep: "04571-100", endereco: "Av. Eng. Luís Carlos Berrini, 1500", cidade: "São Paulo", uf: "SP" },
+  { id: "forn-019", construtoraId: "00003", razaoSocial: "Celite Louças Sanitárias Ltda", nomeFantasia: "Celite SP", cnpjCpf: "78.901.235/0001-57", responsavel: "Marina Tavares", telefone: "(11) 3777-3300", whatsapp: "(11) 98822-7700", email: "vendas@celitesp.com.br", cep: "04578-100", endereco: "R. Verbo Divino, 1600", cidade: "São Paulo", uf: "SP" },
+  { id: "forn-020", construtoraId: "00003", razaoSocial: "Quartzolit Argamassas e Rejuntes Ltda", nomeFantasia: "Quartzolit SP", cnpjCpf: "89.012.346/0001-68", responsavel: "Diego Rangel", telefone: "(11) 3777-4400", whatsapp: "(11) 98833-7700", email: "comercial@quartzolitsp.com.br", cep: "04552-100", endereco: "Av. Santo Amaro, 1100", cidade: "São Paulo", uf: "SP" },
+  { id: "forn-021", construtoraId: "00003", razaoSocial: "Franke Cubas e Torneiras Ltda", nomeFantasia: "Franke SP", cnpjCpf: "90.123.457/0001-79", responsavel: "Letícia Barros", telefone: "(11) 3777-5500", whatsapp: "(11) 98844-7700", email: "vendas@frankesp.com.br", cep: "04566-100", endereco: "Av. Chucri Zaidan, 900", cidade: "São Paulo", uf: "SP" },
+  { id: "forn-022", construtoraId: "00003", razaoSocial: "Bertolini Móveis Planejados Ltda", nomeFantasia: "Bertolini SP", cnpjCpf: "01.234.568/0001-80", responsavel: "Gabriel Assunção", telefone: "(11) 3777-6600", whatsapp: "(11) 98855-7700", email: "comercial@bertolinisp.com.br", cep: "04533-100", endereco: "R. Funchal, 500", cidade: "São Paulo", uf: "SP" },
+
+  // Distribuidoras multimarcas — carregam esquadria, vidro, elétrica,
+  // iluminação, forro, eletrodoméstico, automação, ar-condicionado e
+  // fechadura, categorias que senão ficariam sem nenhum fornecedor.
+  { id: "forn-023", construtoraId: "00001", razaoSocial: "Acabamentos Zona Sul Distribuidora Ltda", nomeFantasia: "Acabamentos Zona Sul", cnpjCpf: "11.222.333/0001-91", responsavel: "Tatiane Borges", telefone: "(11) 3888-1010", whatsapp: "(11) 98911-1010", email: "comercial@acabamentoszonasul.com.br", cep: "04544-000", endereco: "Av. Roque Petroni Jr., 850", cidade: "São Paulo", uf: "SP" },
+  { id: "forn-024", construtoraId: "00002", razaoSocial: "Distribuidora de Acabamentos Campinas Ltda", nomeFantasia: "Acabamentos Campinas", cnpjCpf: "22.333.444/0001-02", responsavel: "Leandro Prado", telefone: "(19) 3232-1010", whatsapp: "(19) 98922-1010", email: "comercial@acabamentoscampinas.com.br", cep: "13073-000", endereco: "Av. Guilherme Campos, 500", cidade: "Campinas", uf: "SP" },
+  { id: "forn-025", construtoraId: "00003", razaoSocial: "Central de Acabamentos Paulista Ltda", nomeFantasia: "Central Acabamentos Paulista", cnpjCpf: "33.444.555/0001-13", responsavel: "Vinícius Godoy", telefone: "(11) 3888-2020", whatsapp: "(11) 98933-2020", email: "comercial@centralacabamentospaulista.com.br", cep: "01310-000", endereco: "Av. Paulista, 1800", cidade: "São Paulo", uf: "SP" },
 ];
 
 const ARQUIVOS_PESSOA_VAZIOS: Pessoa["arquivos"] = {
@@ -678,257 +825,388 @@ const ARQUIVOS_PESSOA_VAZIOS: Pessoa["arquivos"] = {
 // Pessoa/Papel — cadastro único pra qualquer humano com quem a construtora
 // lida (arquiteto/engenheiro/técnico/cliente...), não cadastros paralelos
 // por tipo (ver domain/types.ts Pessoa).
-export const pessoasIniciais: Pessoa[] = [
+const pessoasCuradas: Pessoa[] = [
   { id: "pessoa-001", construtoraId: "00001", papeis: ["Arquiteto", "Responsável pela construtora"], nome: "Fernanda Ribeiro", cpf: "111.222.333-44", email: "fernanda.ribeiro@arquitetura.com.br", telefone: "(11) 3222-1000", empresa: "Ribeiro Arquitetura", cargoEspecialidade: "Arquiteta responsável", conselho: "CAU", numeroRegistro: "A123456-7", ufRegistro: "SP", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "E-mail", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
-  { id: "pessoa-002", construtoraId: "00001", papeis: ["Engenheiro"], nome: "Carlos Eduardo Matos", cpf: "222.333.444-55", email: "carlos.matos@engenharia.com.br", telefone: "(11) 3222-2000", empresa: "Prado Engenharia", cargoEspecialidade: "Engenheiro civil — gerente de obra", conselho: "CREA", numeroRegistro: "5401234", ufRegistro: "SP", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "WhatsApp", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-002", construtoraId: "00001", papeis: ["Engenheiro"], nome: "Carlos Eduardo Matos", cpf: "222.333.444-55", email: "carlos.matos@engemax.com.br", telefone: "(11) 3222-2000", empresa: "Engemax", cargoEspecialidade: "Engenheiro civil — gerente de obra", conselho: "CREA", numeroRegistro: "5401234", ufRegistro: "SP", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "WhatsApp", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
   { id: "pessoa-003", construtoraId: "00003", papeis: ["Cliente"], nome: "Marina Alves", cpf: "333.444.555-66", email: "marina.alves@email.com", telefone: "(11) 98765-4321", empresa: "", cargoEspecialidade: "", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "Alameda Santos, 800, São Paulo/SP", estadoCivil: "Casada", canalContatoPreferencial: "WhatsApp", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+
+  // Prado Engenharia (00001) — clientes das solicitações já existentes
+  // (Ricardo/Camila/Bruno, ver solicitacoesIniciais) mais o time técnico.
+  { id: "pessoa-004", construtoraId: "00001", papeis: ["Cliente"], nome: "Ricardo Nogueira", cpf: "444.555.666-77", email: "ricardo.nogueira@email.com", telefone: "(11) 98111-2233", empresa: "", cargoEspecialidade: "", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "Rua Harmonia, 210, São Paulo/SP", estadoCivil: "Solteiro", canalContatoPreferencial: "WhatsApp", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-005", construtoraId: "00001", papeis: ["Cliente"], nome: "Camila Reis", cpf: "555.666.777-88", email: "camila.reis@email.com", telefone: "(11) 98222-3344", empresa: "", cargoEspecialidade: "", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "Av. Rebouças, 1450, São Paulo/SP", estadoCivil: "Casada", canalContatoPreferencial: "E-mail", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-006", construtoraId: "00001", papeis: ["Cliente"], nome: "Bruno Castro", cpf: "666.777.888-99", email: "bruno.castro@email.com", telefone: "(11) 98333-4455", empresa: "", cargoEspecialidade: "", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "Rua Cardeal Arcoverde, 900, São Paulo/SP", estadoCivil: "Solteiro", canalContatoPreferencial: "Telefone", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-007", construtoraId: "00001", papeis: ["Técnico"], nome: "José Almeida", cpf: "111.222.888-11", email: "jose.almeida@engemax.com.br", telefone: "(11) 3222-3000", empresa: "Engemax", cargoEspecialidade: "Técnico de edificações", conselho: "CREA", numeroRegistro: "5409988", ufRegistro: "SP", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "WhatsApp", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-008", construtoraId: "00001", papeis: ["Designer"], nome: "Patrícia Nunes", cpf: "222.333.999-22", email: "patricia@nunesdesign.com.br", telefone: "(11) 3555-4020", empresa: "Nunes Design de Interiores", cargoEspecialidade: "Designer de interiores", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "E-mail", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-009", construtoraId: "00001", papeis: ["Projetista"], nome: "Rafael Teixeira", cpf: "333.444.000-33", email: "rafael.teixeira@projetos.com.br", telefone: "(11) 3666-5030", empresa: "Teixeira Projetos", cargoEspecialidade: "Projetista arquitetônico", conselho: "CAU", numeroRegistro: "A234567-8", ufRegistro: "SP", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "E-mail", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-010", construtoraId: "00001", papeis: ["Consultor"], nome: "Marcos Vinícius Andrade", cpf: "444.555.111-44", email: "marcos.andrade@consultoria.com.br", telefone: "(11) 98444-5566", empresa: "Andrade Consultoria Imobiliária", cargoEspecialidade: "Consultor de viabilidade", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "WhatsApp", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-011", construtoraId: "00001", papeis: ["Responsável pela construtora"], nome: "Beatriz Prado", cpf: "555.666.222-55", email: "beatriz.prado@engemax.com.br", telefone: "(11) 3222-1010", empresa: "Engemax", cargoEspecialidade: "Sócia-diretora", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "E-mail", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+
+  // Horizonte Construções (00002) — clientes das solicitações já existentes
+  // (Fernanda/André/Juliana) mais o time técnico, em Campinas (DDD 19).
+  { id: "pessoa-012", construtoraId: "00002", papeis: ["Cliente"], nome: "Fernanda Lima", cpf: "666.777.333-66", email: "fernanda.lima@email.com", telefone: "(19) 98111-2200", empresa: "", cargoEspecialidade: "", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "Rua Barão de Jaguara, 300, Campinas/SP", estadoCivil: "Casada", canalContatoPreferencial: "WhatsApp", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-013", construtoraId: "00002", papeis: ["Cliente"], nome: "André Souza", cpf: "777.888.444-77", email: "andre.souza@email.com", telefone: "(19) 98222-3300", empresa: "", cargoEspecialidade: "", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "Av. Norte-Sul, 1200, Campinas/SP", estadoCivil: "Solteiro", canalContatoPreferencial: "E-mail", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-014", construtoraId: "00002", papeis: ["Cliente"], nome: "Juliana Rocha", cpf: "888.999.555-88", email: "juliana.rocha@email.com", telefone: "(19) 98333-4400", empresa: "", cargoEspecialidade: "", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "Rua Ferreira Penteado, 55, Campinas/SP", estadoCivil: "Divorciada", canalContatoPreferencial: "Telefone", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-015", construtoraId: "00002", papeis: ["Arquiteto"], nome: "Gustavo Freitas", cpf: "999.000.666-99", email: "gustavo.freitas@arquitetura.com.br", telefone: "(19) 3232-4040", empresa: "Freitas Arquitetura", cargoEspecialidade: "Arquiteto responsável", conselho: "CAU", numeroRegistro: "A345678-9", ufRegistro: "SP", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "E-mail", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-016", construtoraId: "00002", papeis: ["Engenheiro"], nome: "Débora Martins", cpf: "000.111.777-00", email: "debora.martins@horizonteconstrucoes.com.br", telefone: "(19) 3232-5050", empresa: "Horizonte Construções", cargoEspecialidade: "Engenheira civil — gerente de obra", conselho: "CREA", numeroRegistro: "5412345", ufRegistro: "SP", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "WhatsApp", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-017", construtoraId: "00002", papeis: ["Técnico"], nome: "Paulo Henrique Costa", cpf: "111.222.888-12", email: "paulo.costa@horizonteconstrucoes.com.br", telefone: "(19) 3232-6060", empresa: "Horizonte Construções", cargoEspecialidade: "Técnico de segurança do trabalho", conselho: "CREA", numeroRegistro: "5498877", ufRegistro: "SP", statusRegistro: "Inativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "E-mail", observacoes: "Desligado — mantido pra histórico de laudos assinados.", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-018", construtoraId: "00002", papeis: ["Consultor"], nome: "Renata Almeida", cpf: "222.333.999-23", email: "renata.almeida@consultoria.com.br", telefone: "(19) 98555-6070", empresa: "Almeida Consultoria", cargoEspecialidade: "Consultora comercial", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "WhatsApp", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-019", construtoraId: "00002", papeis: ["Responsável pela construtora"], nome: "Henrique Souza", cpf: "333.444.000-34", email: "henrique.souza@horizonteconstrucoes.com.br", telefone: "(19) 3232-1000", empresa: "Horizonte Construções", cargoEspecialidade: "Diretor de obras", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "E-mail", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+
+  // Alliance (00003) — clientes das solicitações já existentes (Larissa/
+  // Thiago) mais dois clientes novos (pra combo de Vendas ter opções) e
+  // o time técnico.
+  { id: "pessoa-020", construtoraId: "00003", papeis: ["Cliente"], nome: "Larissa Prado", cpf: "444.555.111-45", email: "larissa.prado@email.com", telefone: "(11) 98666-7788", empresa: "", cargoEspecialidade: "", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "Rua Oscar Freire, 500, São Paulo/SP", estadoCivil: "Casada", canalContatoPreferencial: "WhatsApp", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-021", construtoraId: "00003", papeis: ["Cliente"], nome: "Thiago Martins", cpf: "555.666.222-56", email: "thiago.martins@email.com", telefone: "(11) 98777-8899", empresa: "", cargoEspecialidade: "", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "Al. Lorena, 1100, São Paulo/SP", estadoCivil: "Solteiro", canalContatoPreferencial: "E-mail", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-022", construtoraId: "00003", papeis: ["Cliente"], nome: "Vanessa Cardoso", cpf: "666.777.333-67", email: "vanessa.cardoso@email.com", telefone: "(11) 98888-9900", empresa: "", cargoEspecialidade: "", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "Rua Haddock Lobo, 400, São Paulo/SP", estadoCivil: "Casada", canalContatoPreferencial: "WhatsApp", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-023", construtoraId: "00003", papeis: ["Cliente"], nome: "Diego Fontoura", cpf: "777.888.444-78", email: "diego.fontoura@email.com", telefone: "(11) 98999-0011", empresa: "", cargoEspecialidade: "", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "Av. Faria Lima, 2500, São Paulo/SP", estadoCivil: "Solteiro", canalContatoPreferencial: "Telefone", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-024", construtoraId: "00003", papeis: ["Arquiteto"], nome: "Isabela Cunha", cpf: "888.999.555-89", email: "isabela.cunha@arquitetura.com.br", telefone: "(11) 3455-7070", empresa: "Cunha Arquitetura", cargoEspecialidade: "Arquiteta responsável", conselho: "CAU", numeroRegistro: "A456789-0", ufRegistro: "SP", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "E-mail", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-025", construtoraId: "00003", papeis: ["Engenheiro"], nome: "Rodrigo Salles", cpf: "999.000.666-90", email: "rodrigo.salles@alliance.com.br", telefone: "(11) 3455-8080", empresa: "Alliance", cargoEspecialidade: "Engenheiro civil — gerente de obra", conselho: "CREA", numeroRegistro: "5423456", ufRegistro: "SP", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "WhatsApp", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-026", construtoraId: "00003", papeis: ["Projetista"], nome: "Ana Beatriz Rezende", cpf: "000.111.777-01", email: "ana.rezende@projetos.com.br", telefone: "(11) 98111-2299", empresa: "Rezende Projetos", cargoEspecialidade: "Projetista de interiores", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "E-mail", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-027", construtoraId: "00003", papeis: ["Responsável pela construtora"], nome: "Felipe Alliance", cpf: "111.222.888-13", email: "felipe@alliance.com.br", telefone: "(11) 3455-9090", empresa: "Alliance", cargoEspecialidade: "Diretor comercial", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "E-mail", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
 ];
+
+// Pessoas geradas — mesma composição de papéis em toda construtora (mais
+// clientes, que é o que os combos de Vendas/Personalização precisam em
+// volume), só pra dar massa além dos poucos nomes curados acima.
+const NOMES_MASC = [
+  "Lucas", "Gabriel", "Matheus", "Rafael", "Gustavo", "Felipe", "Rodrigo", "Diego", "Vinícius", "Leonardo",
+  "Eduardo", "Fernando", "Marcelo", "Alexandre", "Daniel", "Pedro", "Henrique", "Otávio", "Caio", "Igor",
+  "Renato", "Sérgio", "Wagner", "Fábio", "Márcio", "Cláudio", "Rogério", "Paulo", "Roberto", "Sandro",
+];
+const NOMES_FEM = [
+  "Ana", "Beatriz", "Camila", "Juliana", "Larissa", "Mariana", "Patrícia", "Renata", "Vanessa", "Débora",
+  "Priscila", "Aline", "Bianca", "Carolina", "Daniela", "Isabela", "Letícia", "Natália", "Simone", "Tatiane",
+  "Vera", "Adriana", "Cristina", "Elaine", "Gabriela", "Luciana", "Regina", "Sandra", "Viviane", "Cecília",
+];
+const SOBRENOMES = [
+  "Silva", "Souza", "Costa", "Santos", "Oliveira", "Pereira", "Almeida", "Ribeiro", "Carvalho", "Gomes",
+  "Martins", "Rocha", "Barbosa", "Araújo", "Nascimento", "Cardoso", "Correia", "Teixeira", "Lopes", "Moreira",
+  "Cunha", "Freitas", "Machado", "Melo", "Barros", "Fonseca", "Duarte", "Vieira", "Nunes", "Andrade",
+  "Monteiro", "Pinto", "Ramos", "Batista", "Prado",
+];
+const RUAS_CLIENTE = [
+  "Rua das Palmeiras", "Av. Higienópolis", "Rua Girassol", "Rua das Acácias", "Rua Itápolis",
+  "Rua Joaquim Antunes", "Av. Angélica", "Rua Sampaio Viana", "Av. Rebouças", "Rua Harmonia",
+  "Rua dos Pinheiros", "Av. Indianópolis", "Rua Cotoxó", "Rua Purpurina", "Av. Moema",
+];
+
+interface PlanoPapel {
+  papel: TipoPapel;
+  qtd: number;
+  tipo: "cliente" | "interno" | "externo" | "outro";
+  cargoEspecialidade?: string;
+  conselho?: "CAU" | "CREA";
+  empresaSufixo?: string;
+}
+
+const PLANO_PAPEIS: PlanoPapel[] = [
+  { papel: "Cliente", qtd: 20, tipo: "cliente" },
+  { papel: "Arquiteto", qtd: 3, tipo: "externo", cargoEspecialidade: "Arquiteto(a) associado(a)", conselho: "CAU", empresaSufixo: "Arquitetura" },
+  { papel: "Engenheiro", qtd: 3, tipo: "interno", cargoEspecialidade: "Engenheiro(a) civil", conselho: "CREA" },
+  { papel: "Técnico", qtd: 3, tipo: "interno", cargoEspecialidade: "Técnico(a) de edificações", conselho: "CREA" },
+  { papel: "Designer", qtd: 3, tipo: "externo", cargoEspecialidade: "Designer de interiores", empresaSufixo: "Design de Interiores" },
+  { papel: "Projetista", qtd: 3, tipo: "externo", cargoEspecialidade: "Projetista arquitetônico(a)", empresaSufixo: "Projetos" },
+  { papel: "Consultor", qtd: 3, tipo: "externo", cargoEspecialidade: "Consultor(a) de viabilidade", empresaSufixo: "Consultoria" },
+  { papel: "Responsável pela construtora", qtd: 3, tipo: "interno", cargoEspecialidade: "Diretor(a) / sócio(a)" },
+  { papel: "Outro", qtd: 4, tipo: "outro" },
+];
+
+const CONSTRUTORAS_META: Record<string, { nome: string; ddd: string; cidade: string; dominio: string }> = {
+  "00001": { nome: "Engemax", ddd: "11", cidade: "São Paulo", dominio: "engemax.com.br" },
+  "00002": { nome: "Horizonte Construções", ddd: "19", cidade: "Campinas", dominio: "horizonteconstrucoes.com.br" },
+  "00003": { nome: "Alliance", ddd: "11", cidade: "São Paulo", dominio: "alliance.com.br" },
+};
+
+function slugify(texto: string): string {
+  return texto.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+}
+
+function cpfFake(seed: number): string {
+  const digitos = String(100000000 + seed).padStart(9, "0");
+  const dv = String(seed % 100).padStart(2, "0");
+  return `${digitos.slice(0, 3)}.${digitos.slice(3, 6)}.${digitos.slice(6, 9)}-${dv}`;
+}
+
+function gerarPessoasDaConstrutora(construtoraId: string): Pessoa[] {
+  const meta = CONSTRUTORAS_META[construtoraId];
+  const pessoas: Pessoa[] = [];
+  let seq = 0;
+  for (const plano of PLANO_PAPEIS) {
+    for (let i = 0; i < plano.qtd; i++) {
+      seq += 1;
+      const seedGlobal = seq * 37 + construtoraId.charCodeAt(4) * 101;
+      const genero = seedGlobal % 2 === 0 ? "F" : "M";
+      const poolNomes = genero === "F" ? NOMES_FEM : NOMES_MASC;
+      const primeiroNome = poolNomes[seedGlobal % poolNomes.length];
+      const sobrenome1 = SOBRENOMES[(seedGlobal * 3 + 1) % SOBRENOMES.length];
+      const sobrenome2 = SOBRENOMES[(seedGlobal * 7 + 5) % SOBRENOMES.length];
+      const nome = `${primeiroNome} ${sobrenome1} ${sobrenome2}`;
+      const slugNome = slugify(primeiroNome);
+      const slugSobrenome = slugify(sobrenome2);
+      const cpf = cpfFake(seedGlobal);
+      const telefone = `(${meta.ddd}) 9${String(8000 + seedGlobal).padStart(4, "0")}-${String(1000 + (seedGlobal % 9000)).padStart(4, "0")}`;
+      const canalContatoPreferencial = ["WhatsApp", "E-mail", "Telefone"][seedGlobal % 3];
+      const statusRegistro = seedGlobal % 11 === 0 ? "Inativo" : "Ativo";
+
+      // Sufixo com construtora+seq garante e-mail único mesmo quando dois
+      // nomes gerados colidem (pool de nomes/sobrenomes é pequeno).
+      const uniq = `${construtoraId.slice(-2)}${String(seq).padStart(3, "0")}`;
+      let empresa = "";
+      let email = `${slugNome}.${slugSobrenome}${uniq}@email.com`;
+      if (plano.tipo === "interno") {
+        empresa = meta.nome;
+        email = `${slugNome}.${slugSobrenome}${uniq}@${meta.dominio}`;
+      } else if (plano.tipo === "externo") {
+        empresa = `${sobrenome2} ${plano.empresaSufixo}`;
+        email = `${slugNome}.${slugSobrenome}${uniq}@${slugify(sobrenome2)}${slugify(plano.papel).replace(/\s+/g, "")}.com.br`;
+      }
+
+      pessoas.push({
+        id: `pessoa-${construtoraId}-${String(seq).padStart(3, "0")}`,
+        construtoraId,
+        papeis: [plano.papel],
+        nome,
+        cpf,
+        email,
+        telefone,
+        empresa,
+        cargoEspecialidade: plano.cargoEspecialidade ?? "",
+        conselho: plano.conselho ?? "",
+        numeroRegistro: plano.conselho ? `${plano.conselho === "CAU" ? "A" : "54"}${100000 + seedGlobal}` : "",
+        ufRegistro: plano.conselho ? "SP" : "",
+        statusRegistro,
+        endereco: plano.tipo === "cliente" ? `${RUAS_CLIENTE[seedGlobal % RUAS_CLIENTE.length]}, ${100 + (seedGlobal % 1900)}, ${meta.cidade}/SP` : "",
+        estadoCivil: plano.tipo === "cliente" ? ["Solteiro(a)", "Casado(a)", "Divorciado(a)", "Viúvo(a)"][seedGlobal % 4] : "",
+        canalContatoPreferencial,
+        observacoes: "",
+        arquivos: ARQUIVOS_PESSOA_VAZIOS,
+      });
+    }
+  }
+  return pessoas;
+}
+
+export const pessoasIniciais: Pessoa[] = [...pessoasCuradas, ...CONSTRUTORA_IDS.flatMap(gerarPessoasDaConstrutora)];
 
 // Biblioteca de materiais reutilizável por construtora — identidade do
 // produto (categoria/marca/modelo/SKU), sem preço/prazo: isso é resolvido
 // por item quando o material é anexado a uma opção (Opcao.preco/
 // custoConstrutora), já que preço varia por negociação e por item.
-export const materialCatalogInicial: MaterialCatalogItem[] = [
-  {
-    id: "mc-001",
-    construtoraId: "00001",
-    categoriaId: categoriaId("00001", "Piso"),
-    marcaId: marcaId("00001", "Portobello"),
-    fornecedorId: "forn-001",
-    modelo: "Premium 80×80",
-    sku: "PTB-PREM-8080",
-    imagemUrl:
-      "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2Ij48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iIzlhOWM5NCIvPjxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2M5Y2JjMyIvPjxyZWN0IHg9IjY2IiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjM2M1YmQiLz48cmVjdCB4PSIxMzAiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2NkY2ZjNyIvPjxyZWN0IHg9IjE5NCIgeT0iMiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzZjOGMwIi8+PHJlY3QgeD0iMiIgeT0iNjYiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2MzYzViZCIvPjxyZWN0IHg9IjY2IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjY2RjZmM3Ii8+PHJlY3QgeD0iMTMwIiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzZjOGMwIi8+PHJlY3QgeD0iMTk0IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzljYmMzIi8+PHJlY3QgeD0iMiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjZGNmYzciLz48cmVjdCB4PSI2NiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjNmM4YzAiLz48cmVjdCB4PSIxMzAiIHk9IjEzMCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzljYmMzIi8+PHJlY3QgeD0iMTk0IiB5PSIxMzAiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2MzYzViZCIvPjxyZWN0IHg9IjIiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzZjOGMwIi8+PHJlY3QgeD0iNjYiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzljYmMzIi8+PHJlY3QgeD0iMTMwIiB5PSIxOTQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2MzYzViZCIvPjxyZWN0IHg9IjE5NCIgeT0iMTk0IiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjZGNmYzciLz48L3N2Zz4=",
-    roughness: 0.55,
-    metalness: 0.02,
-  },
-  {
-    id: "mc-002",
-    construtoraId: "00001",
-    categoriaId: categoriaId("00001", "Bancada"),
-    marcaId: marcaId("00001", "Dekton"),
-    fornecedorId: "forn-002",
-    modelo: "Sirius",
-    sku: "DKT-SIRIUS",
-    imagemUrl:
-      "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2Ij48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iI2U0ZTNkZSIvPjxjaXJjbGUgY3g9IjE4MS40IiBjeT0iMzIuNCIgcj0iNS4xIiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxMDMuOCIgY3k9Ijg1LjkiIHI9IjYuMyIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTg4LjYiIGN5PSIxNTQuMSIgcj0iMi4wIiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIzNS40IiBjeT0iMTA0LjkiIHI9IjguMCIgZmlsbD0iI2M5YzljNCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTIwLjYiIGN5PSIxODUuNyIgcj0iNS41IiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxMTguOSIgY3k9IjI3LjMiIHI9IjIuMiIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTkxLjkiIGN5PSIwLjYiIHI9IjcuOSIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNTkuNSIgY3k9IjE4Mi45IiByPSI3LjciIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjEyOS45IiBjeT0iNzYuMyIgcj0iMi40IiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIyMjkuNSIgY3k9IjM4LjMiIHI9IjMuMCIgZmlsbD0iI2M5YzljNCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjAyLjMiIGN5PSIyMTQuNSIgcj0iNS4zIiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxNTkuMyIgY3k9Ijc3LjkiIHI9IjQuMyIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iOTQuOCIgY3k9IjUyLjEiIHI9IjcuMiIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMzcuMSIgY3k9IjE2My45IiByPSIyLjkiIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjIzNC45IiBjeT0iMTA0LjciIHI9IjcuNSIgZmlsbD0iI2M5YzljNCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjIuOCIgY3k9IjI1LjgiIHI9IjQuMyIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTY2LjIiIGN5PSIxMzguNCIgcj0iNS40IiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSI5My41IiBjeT0iMTkwLjEiIHI9IjYuNiIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMzkuNyIgY3k9IjY1LjYiIHI9IjYuNCIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTExLjgiIGN5PSIxMjguMyIgcj0iNS4xIiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxNjIuMyIgY3k9IjExMy4zIiByPSI1LjUiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjE5LjUiIGN5PSIyNTAuMCIgcj0iNC4wIiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxODcuNSIgY3k9IjU5LjkiIHI9IjMuNyIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTI2LjIiIGN5PSIxNzcuNCIgcj0iNi4wIiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxMDQuMCIgY3k9IjIzMS4xIiByPSI3LjciIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjEzNy4xIiBjeT0iNDYuMCIgcj0iMi4yIiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxOTcuMyIgY3k9IjE0Ny45IiByPSIzLjAiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjI5LjYiIGN5PSI4NS4xIiByPSI3LjAiIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjExLjciIGN5PSIxMTYuMCIgcj0iNC45IiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIzNC4yIiBjeT0iMjcuMCIgcj0iNi4yIiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSI1OS42IiBjeT0iNjYuNyIgcj0iNC41IiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxMDcuMiIgY3k9IjM5LjIiIHI9IjQuNSIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTMuOSIgY3k9IjQ0LjMiIHI9IjMuMSIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTY2LjkiIGN5PSI4OC40IiByPSI2LjYiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjE5LjkiIGN5PSIxMzQuNyIgcj0iNS4xIiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIyMTAuNCIgY3k9IjI0NC4wIiByPSI1LjIiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjI1NS4zIiBjeT0iMTIzLjEiIHI9IjMuNyIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTU2LjYiIGN5PSIxODAuOSIgcj0iNC4yIiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxNTcuOSIgY3k9IjE3NC43IiByPSIzLjUiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjEzNC4xIiBjeT0iMjQxLjIiIHI9IjIuNyIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNzMuNiIgY3k9IjE3Ny42IiByPSI3LjQiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjIzNC4xIiBjeT0iOTQuMiIgcj0iNC42IiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSI5NC4zIiBjeT0iNDcuMSIgcj0iNS41IiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIyMDAuMiIgY3k9IjE0Mi43IiByPSI1LjIiIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjY5LjUiIGN5PSI3MS4xIiByPSI1LjkiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjE0LjMiIGN5PSI5LjMiIHI9IjcuNiIgZmlsbD0iI2M5YzljNCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNzAuMyIgY3k9IjEwNi4zIiByPSI1LjAiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjM2LjUiIGN5PSI2Ny41IiByPSI3LjkiIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjE0MC4xIiBjeT0iNTkuMSIgcj0iMy4zIiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxOTMuNiIgY3k9Ijk0LjYiIHI9IjMuNCIgZmlsbD0iI2M5YzljNCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTU5LjYiIGN5PSIwLjYiIHI9IjcuMyIgZmlsbD0iI2M5YzljNCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMzYuMCIgY3k9IjIzNi4zIiByPSIyLjUiIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjUwLjkiIGN5PSI4Ni40IiByPSI1LjYiIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjU4LjUiIGN5PSI3LjEiIHI9IjUuOSIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMzkuNyIgY3k9IjQxLjgiIHI9IjQuNyIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNTguOCIgY3k9IjgwLjgiIHI9IjYuNCIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNDIuNyIgY3k9IjIwOS4wIiByPSI0LjYiIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjgwLjAiIGN5PSIxNTIuNyIgcj0iNi45IiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIzNy4yIiBjeT0iMTIxLjIiIHI9IjcuOCIgZmlsbD0iI2M5YzljNCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjE2LjEiIGN5PSIxMzUuNyIgcj0iMi45IiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48L3N2Zz4=",
-    roughness: 0.25,
-    metalness: 0.08,
-  },
-  // Materiais dos itens PADRÃO (não só das opções de troca) — sem isso, o
-  // ambiente não tem nenhuma foto até o cliente trocar algo, e o
-  // configurador 3D nunca aparece pra mostrar "como já está" antes da
-  // troca (ver docs/padrao-plantas-dxf.md — a ideia é visualizar de+para).
-  {
-    id: "mc-013",
-    construtoraId: "00001",
-    categoriaId: categoriaId("00001", "Piso"),
-    marcaId: marcaId("00001", "Portinari"),
-    fornecedorId: "forn-001",
-    modelo: "Standard 60×60",
-    sku: "PTN-STD-6060",
-    imagemUrl:
-      "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2Ij48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iI2M5YWI3YyIvPjxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2Q5YzE5YSIvPjxyZWN0IHg9IjY2IiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjOWFiN2MiLz48cmVjdCB4PSIxMzAiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2Q5YzE5YSIvPjxyZWN0IHg9IjE5NCIgeT0iMiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzlhYjdjIi8+PHJlY3QgeD0iMiIgeT0iNjYiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2M5YWI3YyIvPjxyZWN0IHg9IjY2IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZDljMTlhIi8+PHJlY3QgeD0iMTMwIiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzlhYjdjIi8+PHJlY3QgeD0iMTk0IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZDljMTlhIi8+PHJlY3QgeD0iMiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNkOWMxOWEiLz48cmVjdCB4PSI2NiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjOWFiN2MiLz48cmVjdCB4PSIxMzAiIHk9IjEzMCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZDljMTlhIi8+PHJlY3QgeD0iMTk0IiB5PSIxMzAiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2M5YWI3YyIvPjxyZWN0IHg9IjIiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzlhYjdjIi8+PHJlY3QgeD0iNjYiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZDljMTlhIi8+PHJlY3QgeD0iMTMwIiB5PSIxOTQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2M5YWI3YyIvPjxyZWN0IHg9IjE5NCIgeT0iMTk0IiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNkOWMxOWEiLz48L3N2Zz4=",
-    roughness: 0.6,
-    metalness: 0,
-  },
-  {
-    id: "mc-014",
-    construtoraId: "00001",
-    categoriaId: categoriaId("00001", "Bancada"),
-    marcaId: marcaId("00001", "Incepa"),
-    fornecedorId: "forn-001",
-    modelo: "Granito Cinza Corumbá",
-    sku: "GRN-CORUMBA",
-    imagemUrl:
-      "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2Ij48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iIzU3NWY2NCIvPjxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iIzZiNzM3OCIvPjxyZWN0IHg9IjY2IiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiM1NzVmNjQiLz48cmVjdCB4PSIxMzAiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iIzZiNzM3OCIvPjxyZWN0IHg9IjE5NCIgeT0iMiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjNTc1ZjY0Ii8+PHJlY3QgeD0iMiIgeT0iNjYiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iIzU3NWY2NCIvPjxyZWN0IHg9IjY2IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjNmI3Mzc4Ii8+PHJlY3QgeD0iMTMwIiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjNTc1ZjY0Ii8+PHJlY3QgeD0iMTk0IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjNmI3Mzc4Ii8+PHJlY3QgeD0iMiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiM2YjczNzgiLz48cmVjdCB4PSI2NiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiM1NzVmNjQiLz48cmVjdCB4PSIxMzAiIHk9IjEzMCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjNmI3Mzc4Ii8+PHJlY3QgeD0iMTk0IiB5PSIxMzAiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iIzU3NWY2NCIvPjxyZWN0IHg9IjIiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjNTc1ZjY0Ii8+PHJlY3QgeD0iNjYiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjNmI3Mzc4Ii8+PHJlY3QgeD0iMTMwIiB5PSIxOTQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iIzU3NWY2NCIvPjxyZWN0IHg9IjE5NCIgeT0iMTk0IiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiM2YjczNzgiLz48L3N2Zz4=",
-    roughness: 0.35,
-    metalness: 0.05,
-  },
-  {
-    id: "mc-015",
-    construtoraId: "00001",
-    categoriaId: categoriaId("00001", "Piso"),
-    marcaId: marcaId("00001", "Celite"),
-    fornecedorId: "forn-001",
-    modelo: "Antiderrapante Bege",
-    sku: "CLT-ANTID-BEGE",
-    imagemUrl:
-      "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2Ij48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iI2IzOWM3NiIvPjxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2M3YjI4ZiIvPjxyZWN0IHg9IjY2IiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNiMzljNzYiLz48cmVjdCB4PSIxMzAiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2M3YjI4ZiIvPjxyZWN0IHg9IjE5NCIgeT0iMiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYjM5Yzc2Ii8+PHJlY3QgeD0iMiIgeT0iNjYiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2IzOWM3NiIvPjxyZWN0IHg9IjY2IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzdiMjhmIi8+PHJlY3QgeD0iMTMwIiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYjM5Yzc2Ii8+PHJlY3QgeD0iMTk0IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzdiMjhmIi8+PHJlY3QgeD0iMiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjN2IyOGYiLz48cmVjdCB4PSI2NiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNiMzljNzYiLz48cmVjdCB4PSIxMzAiIHk9IjEzMCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzdiMjhmIi8+PHJlY3QgeD0iMTk0IiB5PSIxMzAiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2IzOWM3NiIvPjxyZWN0IHg9IjIiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYjM5Yzc2Ii8+PHJlY3QgeD0iNjYiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzdiMjhmIi8+PHJlY3QgeD0iMTMwIiB5PSIxOTQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2IzOWM3NiIvPjxyZWN0IHg9IjE5NCIgeT0iMTk0IiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjN2IyOGYiLz48L3N2Zz4=",
-    roughness: 0.6,
-    metalness: 0,
-  },
-  { id: "mc-003", construtoraId: "00001", categoriaId: categoriaId("00001", "Louças e Metais"), marcaId: marcaId("00001", "Docol"), fornecedorId: "forn-003", modelo: "Benefit Black", sku: "DOC-BEN-BLK", imagemUrl: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2Ij48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iIzFjMWMxYyIvPjxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iIzJiMmIyYiIvPjxyZWN0IHg9IjY2IiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiMxYzFjMWMiLz48cmVjdCB4PSIxMzAiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iIzJiMmIyYiIvPjxyZWN0IHg9IjE5NCIgeT0iMiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMWMxYzFjIi8+PHJlY3QgeD0iMiIgeT0iNjYiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iIzFjMWMxYyIvPjxyZWN0IHg9IjY2IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMmIyYjJiIi8+PHJlY3QgeD0iMTMwIiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMWMxYzFjIi8+PHJlY3QgeD0iMTk0IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMmIyYjJiIi8+PHJlY3QgeD0iMiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiMyYjJiMmIiLz48cmVjdCB4PSI2NiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiMxYzFjMWMiLz48cmVjdCB4PSIxMzAiIHk9IjEzMCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMmIyYjJiIi8+PHJlY3QgeD0iMTk0IiB5PSIxMzAiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iIzFjMWMxYyIvPjxyZWN0IHg9IjIiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMWMxYzFjIi8+PHJlY3QgeD0iNjYiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMmIyYjJiIi8+PHJlY3QgeD0iMTMwIiB5PSIxOTQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iIzFjMWMxYyIvPjxyZWN0IHg9IjE5NCIgeT0iMTk0IiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiMyYjJiMmIiLz48L3N2Zz4=", roughness: 0.2, metalness: 0.6 },
-  { id: "mc-004", construtoraId: "00001", categoriaId: categoriaId("00001", "Cuba"), marcaId: marcaId("00001", "Tramontina"), fornecedorId: "forn-004", modelo: "Morgana Dupla + Gourmet", sku: "TRAM-MORG-DP", imagemUrl: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2Ij48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iI2I2YjhiYSIvPjxyZWN0IHg9IjAiIHk9IjAiIHdpZHRoPSIyNTYiIGhlaWdodD0iMyIgZmlsbD0iI2Q4ZDhkOCIgb3BhY2l0eT0iMC42Ii8+PHJlY3QgeD0iMCIgeT0iNi40IiB3aWR0aD0iMjU2IiBoZWlnaHQ9IjMiIGZpbGw9IiNjMmMyYzIiIG9wYWNpdHk9IjAuNiIvPjxyZWN0IHg9IjAiIHk9IjEyLjgiIHdpZHRoPSIyNTYiIGhlaWdodD0iMyIgZmlsbD0iI2Q4ZDhkOCIgb3BhY2l0eT0iMC42Ii8+PHJlY3QgeD0iMCIgeT0iMTkuMjAwMDAwMDAwMDAwMDAzIiB3aWR0aD0iMjU2IiBoZWlnaHQ9IjMiIGZpbGw9IiNjMmMyYzIiIG9wYWNpdHk9IjAuNiIvPjxyZWN0IHg9IjAiIHk9IjI1LjYiIHdpZHRoPSIyNTYiIGhlaWdodD0iMyIgZmlsbD0iI2Q4ZDhkOCIgb3BhY2l0eT0iMC42Ii8+PHJlY3QgeD0iMCIgeT0iMzIiIHdpZHRoPSIyNTYiIGhlaWdodD0iMyIgZmlsbD0iI2MyYzJjMiIgb3BhY2l0eT0iMC42Ii8+PHJlY3QgeD0iMCIgeT0iMzguNDAwMDAwMDAwMDAwMDA2IiB3aWR0aD0iMjU2IiBoZWlnaHQ9IjMiIGZpbGw9IiNkOGQ4ZDgiIG9wYWNpdHk9IjAuNiIvPjxyZWN0IHg9IjAiIHk9IjQ0LjgwMDAwMDAwMDAwMDAwNCIgd2lkdGg9IjI1NiIgaGVpZ2h0PSIzIiBmaWxsPSIjYzJjMmMyIiBvcGFjaXR5PSIwLjYiLz48cmVjdCB4PSIwIiB5PSI1MS4yIiB3aWR0aD0iMjU2IiBoZWlnaHQ9IjMiIGZpbGw9IiNkOGQ4ZDgiIG9wYWNpdHk9IjAuNiIvPjxyZWN0IHg9IjAiIHk9IjU3LjYiIHdpZHRoPSIyNTYiIGhlaWdodD0iMyIgZmlsbD0iI2MyYzJjMiIgb3BhY2l0eT0iMC42Ii8+PHJlY3QgeD0iMCIgeT0iNjQiIHdpZHRoPSIyNTYiIGhlaWdodD0iMyIgZmlsbD0iI2Q4ZDhkOCIgb3BhY2l0eT0iMC42Ii8+PHJlY3QgeD0iMCIgeT0iNzAuNCIgd2lkdGg9IjI1NiIgaGVpZ2h0PSIzIiBmaWxsPSIjYzJjMmMyIiBvcGFjaXR5PSIwLjYiLz48cmVjdCB4PSIwIiB5PSI3Ni44MDAwMDAwMDAwMDAwMSIgd2lkdGg9IjI1NiIgaGVpZ2h0PSIzIiBmaWxsPSIjZDhkOGQ4IiBvcGFjaXR5PSIwLjYiLz48cmVjdCB4PSIwIiB5PSI4My4yIiB3aWR0aD0iMjU2IiBoZWlnaHQ9IjMiIGZpbGw9IiNjMmMyYzIiIG9wYWNpdHk9IjAuNiIvPjxyZWN0IHg9IjAiIHk9Ijg5LjYwMDAwMDAwMDAwMDAxIiB3aWR0aD0iMjU2IiBoZWlnaHQ9IjMiIGZpbGw9IiNkOGQ4ZDgiIG9wYWNpdHk9IjAuNiIvPjxyZWN0IHg9IjAiIHk9Ijk2IiB3aWR0aD0iMjU2IiBoZWlnaHQ9IjMiIGZpbGw9IiNjMmMyYzIiIG9wYWNpdHk9IjAuNiIvPjxyZWN0IHg9IjAiIHk9IjEwMi40IiB3aWR0aD0iMjU2IiBoZWlnaHQ9IjMiIGZpbGw9IiNkOGQ4ZDgiIG9wYWNpdHk9IjAuNiIvPjxyZWN0IHg9IjAiIHk9IjEwOC44MDAwMDAwMDAwMDAwMSIgd2lkdGg9IjI1NiIgaGVpZ2h0PSIzIiBmaWxsPSIjYzJjMmMyIiBvcGFjaXR5PSIwLjYiLz48cmVjdCB4PSIwIiB5PSIxMTUuMiIgd2lkdGg9IjI1NiIgaGVpZ2h0PSIzIiBmaWxsPSIjZDhkOGQ4IiBvcGFjaXR5PSIwLjYiLz48cmVjdCB4PSIwIiB5PSIxMjEuNjAwMDAwMDAwMDAwMDEiIHdpZHRoPSIyNTYiIGhlaWdodD0iMyIgZmlsbD0iI2MyYzJjMiIgb3BhY2l0eT0iMC42Ii8+PHJlY3QgeD0iMCIgeT0iMTI4IiB3aWR0aD0iMjU2IiBoZWlnaHQ9IjMiIGZpbGw9IiNkOGQ4ZDgiIG9wYWNpdHk9IjAuNiIvPjxyZWN0IHg9IjAiIHk9IjEzNC40IiB3aWR0aD0iMjU2IiBoZWlnaHQ9IjMiIGZpbGw9IiNjMmMyYzIiIG9wYWNpdHk9IjAuNiIvPjxyZWN0IHg9IjAiIHk9IjE0MC44IiB3aWR0aD0iMjU2IiBoZWlnaHQ9IjMiIGZpbGw9IiNkOGQ4ZDgiIG9wYWNpdHk9IjAuNiIvPjxyZWN0IHg9IjAiIHk9IjE0Ny4yMDAwMDAwMDAwMDAwMiIgd2lkdGg9IjI1NiIgaGVpZ2h0PSIzIiBmaWxsPSIjYzJjMmMyIiBvcGFjaXR5PSIwLjYiLz48cmVjdCB4PSIwIiB5PSIxNTMuNjAwMDAwMDAwMDAwMDIiIHdpZHRoPSIyNTYiIGhlaWdodD0iMyIgZmlsbD0iI2Q4ZDhkOCIgb3BhY2l0eT0iMC42Ii8+PHJlY3QgeD0iMCIgeT0iMTYwIiB3aWR0aD0iMjU2IiBoZWlnaHQ9IjMiIGZpbGw9IiNjMmMyYzIiIG9wYWNpdHk9IjAuNiIvPjxyZWN0IHg9IjAiIHk9IjE2Ni40IiB3aWR0aD0iMjU2IiBoZWlnaHQ9IjMiIGZpbGw9IiNkOGQ4ZDgiIG9wYWNpdHk9IjAuNiIvPjxyZWN0IHg9IjAiIHk9IjE3Mi44IiB3aWR0aD0iMjU2IiBoZWlnaHQ9IjMiIGZpbGw9IiNjMmMyYzIiIG9wYWNpdHk9IjAuNiIvPjxyZWN0IHg9IjAiIHk9IjE3OS4yMDAwMDAwMDAwMDAwMiIgd2lkdGg9IjI1NiIgaGVpZ2h0PSIzIiBmaWxsPSIjZDhkOGQ4IiBvcGFjaXR5PSIwLjYiLz48cmVjdCB4PSIwIiB5PSIxODUuNjAwMDAwMDAwMDAwMDIiIHdpZHRoPSIyNTYiIGhlaWdodD0iMyIgZmlsbD0iI2MyYzJjMiIgb3BhY2l0eT0iMC42Ii8+PHJlY3QgeD0iMCIgeT0iMTkyIiB3aWR0aD0iMjU2IiBoZWlnaHQ9IjMiIGZpbGw9IiNkOGQ4ZDgiIG9wYWNpdHk9IjAuNiIvPjxyZWN0IHg9IjAiIHk9IjE5OC40IiB3aWR0aD0iMjU2IiBoZWlnaHQ9IjMiIGZpbGw9IiNjMmMyYzIiIG9wYWNpdHk9IjAuNiIvPjxyZWN0IHg9IjAiIHk9IjIwNC44IiB3aWR0aD0iMjU2IiBoZWlnaHQ9IjMiIGZpbGw9IiNkOGQ4ZDgiIG9wYWNpdHk9IjAuNiIvPjxyZWN0IHg9IjAiIHk9IjIxMS4yMDAwMDAwMDAwMDAwMiIgd2lkdGg9IjI1NiIgaGVpZ2h0PSIzIiBmaWxsPSIjYzJjMmMyIiBvcGFjaXR5PSIwLjYiLz48cmVjdCB4PSIwIiB5PSIyMTcuNjAwMDAwMDAwMDAwMDIiIHdpZHRoPSIyNTYiIGhlaWdodD0iMyIgZmlsbD0iI2Q4ZDhkOCIgb3BhY2l0eT0iMC42Ii8+PHJlY3QgeD0iMCIgeT0iMjI0IiB3aWR0aD0iMjU2IiBoZWlnaHQ9IjMiIGZpbGw9IiNjMmMyYzIiIG9wYWNpdHk9IjAuNiIvPjxyZWN0IHg9IjAiIHk9IjIzMC40IiB3aWR0aD0iMjU2IiBoZWlnaHQ9IjMiIGZpbGw9IiNkOGQ4ZDgiIG9wYWNpdHk9IjAuNiIvPjxyZWN0IHg9IjAiIHk9IjIzNi44IiB3aWR0aD0iMjU2IiBoZWlnaHQ9IjMiIGZpbGw9IiNjMmMyYzIiIG9wYWNpdHk9IjAuNiIvPjxyZWN0IHg9IjAiIHk9IjI0My4yMDAwMDAwMDAwMDAwMiIgd2lkdGg9IjI1NiIgaGVpZ2h0PSIzIiBmaWxsPSIjZDhkOGQ4IiBvcGFjaXR5PSIwLjYiLz48cmVjdCB4PSIwIiB5PSIyNDkuNjAwMDAwMDAwMDAwMDIiIHdpZHRoPSIyNTYiIGhlaWdodD0iMyIgZmlsbD0iI2MyYzJjMiIgb3BhY2l0eT0iMC42Ii8+PC9zdmc+", roughness: 0.3, metalness: 0.85 },
-  {
-    id: "mc-011",
-    construtoraId: "00001",
-    categoriaId: categoriaId("00001", "Piso"),
-    marcaId: marcaId("00001", "Eliane"),
-    fornecedorId: "forn-001",
-    modelo: "Antiderrapante Areia",
-    sku: "ELI-ANTID-AREIA",
-    imagemUrl:
-      "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2Ij48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iI2EzOTA2ZCIvPjxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2NiYjg5NiIvPjxyZWN0IHg9IjY2IiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNkMWJmYTAiLz48cmVjdCB4PSIxMzAiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2M2YjI4YyIvPjxyZWN0IHg9IjE5NCIgeT0iMiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjY2ZiYzk4Ii8+PHJlY3QgeD0iMiIgeT0iNjYiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2QxYmZhMCIvPjxyZWN0IHg9IjY2IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzZiMjhjIi8+PHJlY3QgeD0iMTMwIiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjY2ZiYzk4Ii8+PHJlY3QgeD0iMTk0IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjY2JiODk2Ii8+PHJlY3QgeD0iMiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjNmIyOGMiLz48cmVjdCB4PSI2NiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjZmJjOTgiLz48cmVjdCB4PSIxMzAiIHk9IjEzMCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjY2JiODk2Ii8+PHJlY3QgeD0iMTk0IiB5PSIxMzAiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2QxYmZhMCIvPjxyZWN0IHg9IjIiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjY2ZiYzk4Ii8+PHJlY3QgeD0iNjYiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjY2JiODk2Ii8+PHJlY3QgeD0iMTMwIiB5PSIxOTQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2QxYmZhMCIvPjxyZWN0IHg9IjE5NCIgeT0iMTk0IiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjNmIyOGMiLz48L3N2Zz4=",
-    roughness: 0.6,
-    metalness: 0,
-  },
-  {
-    id: "mc-012",
-    construtoraId: "00001",
-    categoriaId: categoriaId("00001", "Revestimento"),
-    marcaId: marcaId("00001", "Portobello"),
-    fornecedorId: "forn-001",
-    modelo: "Off-White Grande Formato",
-    sku: "PTB-OFFW-GF",
-    imagemUrl:
-      "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2Ij48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iI2Q4ZDVjYiIvPjxyZWN0IHg9Ii02MiIgeT0iMiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZjJmMGVhIi8+PHJlY3QgeD0iMiIgeT0iMiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZjJmMGVhIi8+PHJlY3QgeD0iNjYiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2YyZjBlYSIvPjxyZWN0IHg9IjEzMCIgeT0iMiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZjJmMGVhIi8+PHJlY3QgeD0iMTk0IiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNmMmYwZWEiLz48cmVjdCB4PSIyNTgiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2YyZjBlYSIvPjxyZWN0IHg9Ii0zMCIgeT0iNjYiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2YyZjBlYSIvPjxyZWN0IHg9IjM0IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZjJmMGVhIi8+PHJlY3QgeD0iOTgiIHk9IjY2IiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNmMmYwZWEiLz48cmVjdCB4PSIxNjIiIHk9IjY2IiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNmMmYwZWEiLz48cmVjdCB4PSIyMjYiIHk9IjY2IiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNmMmYwZWEiLz48cmVjdCB4PSIyOTAiIHk9IjY2IiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNmMmYwZWEiLz48cmVjdCB4PSItNjIiIHk9IjEzMCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZjJmMGVhIi8+PHJlY3QgeD0iMiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNmMmYwZWEiLz48cmVjdCB4PSI2NiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNmMmYwZWEiLz48cmVjdCB4PSIxMzAiIHk9IjEzMCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZjJmMGVhIi8+PHJlY3QgeD0iMTk0IiB5PSIxMzAiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2YyZjBlYSIvPjxyZWN0IHg9IjI1OCIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNmMmYwZWEiLz48cmVjdCB4PSItMzAiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZjJmMGVhIi8+PHJlY3QgeD0iMzQiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZjJmMGVhIi8+PHJlY3QgeD0iOTgiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZjJmMGVhIi8+PHJlY3QgeD0iMTYyIiB5PSIxOTQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2YyZjBlYSIvPjxyZWN0IHg9IjIyNiIgeT0iMTk0IiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNmMmYwZWEiLz48cmVjdCB4PSIyOTAiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZjJmMGVhIi8+PC9zdmc+",
-    roughness: 0.3,
-    metalness: 0.05,
-  },
-  {
-    id: "mc-005",
-    construtoraId: "00003",
-    categoriaId: categoriaId("00003", "Piso"),
-    marcaId: marcaId("00003", "Portobello"),
-    fornecedorId: "forn-005",
-    modelo: "Marmorizado Extra",
-    sku: "PTB-MARM-EX",
-    imagemUrl:
-      "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2Ij48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iIzlhOWM5NCIvPjxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2M5Y2JjMyIvPjxyZWN0IHg9IjY2IiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjM2M1YmQiLz48cmVjdCB4PSIxMzAiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2NkY2ZjNyIvPjxyZWN0IHg9IjE5NCIgeT0iMiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzZjOGMwIi8+PHJlY3QgeD0iMiIgeT0iNjYiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2MzYzViZCIvPjxyZWN0IHg9IjY2IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjY2RjZmM3Ii8+PHJlY3QgeD0iMTMwIiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzZjOGMwIi8+PHJlY3QgeD0iMTk0IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzljYmMzIi8+PHJlY3QgeD0iMiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjZGNmYzciLz48cmVjdCB4PSI2NiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjNmM4YzAiLz48cmVjdCB4PSIxMzAiIHk9IjEzMCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzljYmMzIi8+PHJlY3QgeD0iMTk0IiB5PSIxMzAiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2MzYzViZCIvPjxyZWN0IHg9IjIiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzZjOGMwIi8+PHJlY3QgeD0iNjYiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzljYmMzIi8+PHJlY3QgeD0iMTMwIiB5PSIxOTQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2MzYzViZCIvPjxyZWN0IHg9IjE5NCIgeT0iMTk0IiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjZGNmYzciLz48L3N2Zz4=",
-    roughness: 0.55,
-    metalness: 0.02,
-  },
-  {
-    id: "mc-006",
-    construtoraId: "00003",
-    categoriaId: categoriaId("00003", "Revestimento"),
-    marcaId: marcaId("00003", "Portobello"),
-    fornecedorId: "forn-005",
-    modelo: "Off-White Grande Formato",
-    sku: "PTB-OFFW-GF",
-    imagemUrl:
-      "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2Ij48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iI2Q4ZDVjYiIvPjxyZWN0IHg9Ii02MiIgeT0iMiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZjJmMGVhIi8+PHJlY3QgeD0iMiIgeT0iMiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZjJmMGVhIi8+PHJlY3QgeD0iNjYiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2YyZjBlYSIvPjxyZWN0IHg9IjEzMCIgeT0iMiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZjJmMGVhIi8+PHJlY3QgeD0iMTk0IiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNmMmYwZWEiLz48cmVjdCB4PSIyNTgiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2YyZjBlYSIvPjxyZWN0IHg9Ii0zMCIgeT0iNjYiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2YyZjBlYSIvPjxyZWN0IHg9IjM0IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZjJmMGVhIi8+PHJlY3QgeD0iOTgiIHk9IjY2IiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNmMmYwZWEiLz48cmVjdCB4PSIxNjIiIHk9IjY2IiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNmMmYwZWEiLz48cmVjdCB4PSIyMjYiIHk9IjY2IiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNmMmYwZWEiLz48cmVjdCB4PSIyOTAiIHk9IjY2IiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNmMmYwZWEiLz48cmVjdCB4PSItNjIiIHk9IjEzMCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZjJmMGVhIi8+PHJlY3QgeD0iMiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNmMmYwZWEiLz48cmVjdCB4PSI2NiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNmMmYwZWEiLz48cmVjdCB4PSIxMzAiIHk9IjEzMCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZjJmMGVhIi8+PHJlY3QgeD0iMTk0IiB5PSIxMzAiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2YyZjBlYSIvPjxyZWN0IHg9IjI1OCIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNmMmYwZWEiLz48cmVjdCB4PSItMzAiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZjJmMGVhIi8+PHJlY3QgeD0iMzQiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZjJmMGVhIi8+PHJlY3QgeD0iOTgiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZjJmMGVhIi8+PHJlY3QgeD0iMTYyIiB5PSIxOTQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2YyZjBlYSIvPjxyZWN0IHg9IjIyNiIgeT0iMTk0IiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNmMmYwZWEiLz48cmVjdCB4PSIyOTAiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZjJmMGVhIi8+PC9zdmc+",
-    roughness: 0.3,
-    metalness: 0.05,
-  },
-  {
-    id: "mc-007",
-    construtoraId: "00003",
-    categoriaId: categoriaId("00003", "Bancada"),
-    marcaId: marcaId("00003", "Silestone"),
-    fornecedorId: "forn-006",
-    modelo: "Branco Ibiza",
-    sku: "QRTZ-IBIZA",
-    imagemUrl:
-      "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2Ij48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iI2U0ZTNkZSIvPjxjaXJjbGUgY3g9IjE4MS40IiBjeT0iMzIuNCIgcj0iNS4xIiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxMDMuOCIgY3k9Ijg1LjkiIHI9IjYuMyIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTg4LjYiIGN5PSIxNTQuMSIgcj0iMi4wIiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIzNS40IiBjeT0iMTA0LjkiIHI9IjguMCIgZmlsbD0iI2M5YzljNCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTIwLjYiIGN5PSIxODUuNyIgcj0iNS41IiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxMTguOSIgY3k9IjI3LjMiIHI9IjIuMiIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTkxLjkiIGN5PSIwLjYiIHI9IjcuOSIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNTkuNSIgY3k9IjE4Mi45IiByPSI3LjciIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjEyOS45IiBjeT0iNzYuMyIgcj0iMi40IiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIyMjkuNSIgY3k9IjM4LjMiIHI9IjMuMCIgZmlsbD0iI2M5YzljNCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjAyLjMiIGN5PSIyMTQuNSIgcj0iNS4zIiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxNTkuMyIgY3k9Ijc3LjkiIHI9IjQuMyIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iOTQuOCIgY3k9IjUyLjEiIHI9IjcuMiIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMzcuMSIgY3k9IjE2My45IiByPSIyLjkiIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjIzNC45IiBjeT0iMTA0LjciIHI9IjcuNSIgZmlsbD0iI2M5YzljNCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjIuOCIgY3k9IjI1LjgiIHI9IjQuMyIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTY2LjIiIGN5PSIxMzguNCIgcj0iNS40IiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSI5My41IiBjeT0iMTkwLjEiIHI9IjYuNiIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMzkuNyIgY3k9IjY1LjYiIHI9IjYuNCIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTExLjgiIGN5PSIxMjguMyIgcj0iNS4xIiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxNjIuMyIgY3k9IjExMy4zIiByPSI1LjUiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjE5LjUiIGN5PSIyNTAuMCIgcj0iNC4wIiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxODcuNSIgY3k9IjU5LjkiIHI9IjMuNyIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTI2LjIiIGN5PSIxNzcuNCIgcj0iNi4wIiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxMDQuMCIgY3k9IjIzMS4xIiByPSI3LjciIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjEzNy4xIiBjeT0iNDYuMCIgcj0iMi4yIiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxOTcuMyIgY3k9IjE0Ny45IiByPSIzLjAiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjI5LjYiIGN5PSI4NS4xIiByPSI3LjAiIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjExLjciIGN5PSIxMTYuMCIgcj0iNC45IiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIzNC4yIiBjeT0iMjcuMCIgcj0iNi4yIiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSI1OS42IiBjeT0iNjYuNyIgcj0iNC41IiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxMDcuMiIgY3k9IjM5LjIiIHI9IjQuNSIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTMuOSIgY3k9IjQ0LjMiIHI9IjMuMSIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTY2LjkiIGN5PSI4OC40IiByPSI2LjYiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjE5LjkiIGN5PSIxMzQuNyIgcj0iNS4xIiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIyMTAuNCIgY3k9IjI0NC4wIiByPSI1LjIiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjI1NS4zIiBjeT0iMTIzLjEiIHI9IjMuNyIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTU2LjYiIGN5PSIxODAuOSIgcj0iNC4yIiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxNTcuOSIgY3k9IjE3NC43IiByPSIzLjUiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjEzNC4xIiBjeT0iMjQxLjIiIHI9IjIuNyIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNzMuNiIgY3k9IjE3Ny42IiByPSI3LjQiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjIzNC4xIiBjeT0iOTQuMiIgcj0iNC42IiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSI5NC4zIiBjeT0iNDcuMSIgcj0iNS41IiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIyMDAuMiIgY3k9IjE0Mi43IiByPSI1LjIiIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjY5LjUiIGN5PSI3MS4xIiByPSI1LjkiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjE0LjMiIGN5PSI5LjMiIHI9IjcuNiIgZmlsbD0iI2M5YzljNCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNzAuMyIgY3k9IjEwNi4zIiByPSI1LjAiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjM2LjUiIGN5PSI2Ny41IiByPSI3LjkiIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjE0MC4xIiBjeT0iNTkuMSIgcj0iMy4zIiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxOTMuNiIgY3k9Ijk0LjYiIHI9IjMuNCIgZmlsbD0iI2M5YzljNCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTU5LjYiIGN5PSIwLjYiIHI9IjcuMyIgZmlsbD0iI2M5YzljNCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMzYuMCIgY3k9IjIzNi4zIiByPSIyLjUiIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjUwLjkiIGN5PSI4Ni40IiByPSI1LjYiIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjU4LjUiIGN5PSI3LjEiIHI9IjUuOSIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMzkuNyIgY3k9IjQxLjgiIHI9IjQuNyIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNTguOCIgY3k9IjgwLjgiIHI9IjYuNCIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNDIuNyIgY3k9IjIwOS4wIiByPSI0LjYiIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjgwLjAiIGN5PSIxNTIuNyIgcj0iNi45IiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIzNy4yIiBjeT0iMTIxLjIiIHI9IjcuOCIgZmlsbD0iI2M5YzljNCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjE2LjEiIGN5PSIxMzUuNyIgcj0iMi45IiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48L3N2Zz4=",
-    roughness: 0.22,
-    metalness: 0.05,
-  },
-  { id: "mc-008", construtoraId: "00003", categoriaId: categoriaId("00003", "Louças e Metais"), marcaId: marcaId("00003", "Docol"), fornecedorId: "forn-005", modelo: "Benefit Black", sku: "DOC-BEN-BLK", imagemUrl: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2Ij48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iIzFjMWMxYyIvPjxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iIzJiMmIyYiIvPjxyZWN0IHg9IjY2IiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiMxYzFjMWMiLz48cmVjdCB4PSIxMzAiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iIzJiMmIyYiIvPjxyZWN0IHg9IjE5NCIgeT0iMiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMWMxYzFjIi8+PHJlY3QgeD0iMiIgeT0iNjYiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iIzFjMWMxYyIvPjxyZWN0IHg9IjY2IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMmIyYjJiIi8+PHJlY3QgeD0iMTMwIiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMWMxYzFjIi8+PHJlY3QgeD0iMTk0IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMmIyYjJiIi8+PHJlY3QgeD0iMiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiMyYjJiMmIiLz48cmVjdCB4PSI2NiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiMxYzFjMWMiLz48cmVjdCB4PSIxMzAiIHk9IjEzMCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMmIyYjJiIi8+PHJlY3QgeD0iMTk0IiB5PSIxMzAiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iIzFjMWMxYyIvPjxyZWN0IHg9IjIiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMWMxYzFjIi8+PHJlY3QgeD0iNjYiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMmIyYjJiIi8+PHJlY3QgeD0iMTMwIiB5PSIxOTQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iIzFjMWMxYyIvPjxyZWN0IHg9IjE5NCIgeT0iMTk0IiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiMyYjJiMmIiLz48L3N2Zz4=", roughness: 0.2, metalness: 0.6 },
-  {
-    id: "mc-009",
-    construtoraId: "00002",
-    categoriaId: categoriaId("00002", "Piso"),
-    marcaId: marcaId("00002", "Portobello"),
-    fornecedorId: "forn-007",
-    modelo: "Marmorizado Extra",
-    sku: "PTB-MARM-EX",
-    imagemUrl:
-      "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2Ij48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iIzlhOWM5NCIvPjxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2M5Y2JjMyIvPjxyZWN0IHg9IjY2IiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjM2M1YmQiLz48cmVjdCB4PSIxMzAiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2NkY2ZjNyIvPjxyZWN0IHg9IjE5NCIgeT0iMiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzZjOGMwIi8+PHJlY3QgeD0iMiIgeT0iNjYiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2MzYzViZCIvPjxyZWN0IHg9IjY2IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjY2RjZmM3Ii8+PHJlY3QgeD0iMTMwIiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzZjOGMwIi8+PHJlY3QgeD0iMTk0IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzljYmMzIi8+PHJlY3QgeD0iMiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjZGNmYzciLz48cmVjdCB4PSI2NiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjNmM4YzAiLz48cmVjdCB4PSIxMzAiIHk9IjEzMCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzljYmMzIi8+PHJlY3QgeD0iMTk0IiB5PSIxMzAiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2MzYzViZCIvPjxyZWN0IHg9IjIiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzZjOGMwIi8+PHJlY3QgeD0iNjYiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzljYmMzIi8+PHJlY3QgeD0iMTMwIiB5PSIxOTQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2MzYzViZCIvPjxyZWN0IHg9IjE5NCIgeT0iMTk0IiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjZGNmYzciLz48L3N2Zz4=",
-    roughness: 0.55,
-    metalness: 0.02,
-  },
-  {
-    id: "mc-010",
-    construtoraId: "00002",
-    categoriaId: categoriaId("00002", "Bancada"),
-    marcaId: marcaId("00002", "Dekton"),
-    fornecedorId: "forn-007",
-    modelo: "Sirius",
-    sku: "DKT-SIRIUS",
-    imagemUrl:
-      "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2Ij48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iI2U0ZTNkZSIvPjxjaXJjbGUgY3g9IjE4MS40IiBjeT0iMzIuNCIgcj0iNS4xIiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxMDMuOCIgY3k9Ijg1LjkiIHI9IjYuMyIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTg4LjYiIGN5PSIxNTQuMSIgcj0iMi4wIiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIzNS40IiBjeT0iMTA0LjkiIHI9IjguMCIgZmlsbD0iI2M5YzljNCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTIwLjYiIGN5PSIxODUuNyIgcj0iNS41IiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxMTguOSIgY3k9IjI3LjMiIHI9IjIuMiIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTkxLjkiIGN5PSIwLjYiIHI9IjcuOSIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNTkuNSIgY3k9IjE4Mi45IiByPSI3LjciIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjEyOS45IiBjeT0iNzYuMyIgcj0iMi40IiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIyMjkuNSIgY3k9IjM4LjMiIHI9IjMuMCIgZmlsbD0iI2M5YzljNCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjAyLjMiIGN5PSIyMTQuNSIgcj0iNS4zIiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxNTkuMyIgY3k9Ijc3LjkiIHI9IjQuMyIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iOTQuOCIgY3k9IjUyLjEiIHI9IjcuMiIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMzcuMSIgY3k9IjE2My45IiByPSIyLjkiIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjIzNC45IiBjeT0iMTA0LjciIHI9IjcuNSIgZmlsbD0iI2M5YzljNCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjIuOCIgY3k9IjI1LjgiIHI9IjQuMyIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTY2LjIiIGN5PSIxMzguNCIgcj0iNS40IiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSI5My41IiBjeT0iMTkwLjEiIHI9IjYuNiIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMzkuNyIgY3k9IjY1LjYiIHI9IjYuNCIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTExLjgiIGN5PSIxMjguMyIgcj0iNS4xIiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxNjIuMyIgY3k9IjExMy4zIiByPSI1LjUiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjE5LjUiIGN5PSIyNTAuMCIgcj0iNC4wIiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxODcuNSIgY3k9IjU5LjkiIHI9IjMuNyIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTI2LjIiIGN5PSIxNzcuNCIgcj0iNi4wIiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxMDQuMCIgY3k9IjIzMS4xIiByPSI3LjciIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjEzNy4xIiBjeT0iNDYuMCIgcj0iMi4yIiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxOTcuMyIgY3k9IjE0Ny45IiByPSIzLjAiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjI5LjYiIGN5PSI4NS4xIiByPSI3LjAiIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjExLjciIGN5PSIxMTYuMCIgcj0iNC45IiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIzNC4yIiBjeT0iMjcuMCIgcj0iNi4yIiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSI1OS42IiBjeT0iNjYuNyIgcj0iNC41IiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxMDcuMiIgY3k9IjM5LjIiIHI9IjQuNSIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTMuOSIgY3k9IjQ0LjMiIHI9IjMuMSIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTY2LjkiIGN5PSI4OC40IiByPSI2LjYiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjE5LjkiIGN5PSIxMzQuNyIgcj0iNS4xIiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIyMTAuNCIgY3k9IjI0NC4wIiByPSI1LjIiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjI1NS4zIiBjeT0iMTIzLjEiIHI9IjMuNyIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTU2LjYiIGN5PSIxODAuOSIgcj0iNC4yIiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxNTcuOSIgY3k9IjE3NC43IiByPSIzLjUiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjEzNC4xIiBjeT0iMjQxLjIiIHI9IjIuNyIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNzMuNiIgY3k9IjE3Ny42IiByPSI3LjQiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjIzNC4xIiBjeT0iOTQuMiIgcj0iNC42IiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSI5NC4zIiBjeT0iNDcuMSIgcj0iNS41IiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIyMDAuMiIgY3k9IjE0Mi43IiByPSI1LjIiIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjY5LjUiIGN5PSI3MS4xIiByPSI1LjkiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjE0LjMiIGN5PSI5LjMiIHI9IjcuNiIgZmlsbD0iI2M5YzljNCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNzAuMyIgY3k9IjEwNi4zIiByPSI1LjAiIGZpbGw9IiNjOWM5YzQiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjM2LjUiIGN5PSI2Ny41IiByPSI3LjkiIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjE0MC4xIiBjeT0iNTkuMSIgcj0iMy4zIiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxOTMuNiIgY3k9Ijk0LjYiIHI9IjMuNCIgZmlsbD0iI2M5YzljNCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTU5LjYiIGN5PSIwLjYiIHI9IjcuMyIgZmlsbD0iI2M5YzljNCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMzYuMCIgY3k9IjIzNi4zIiByPSIyLjUiIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjUwLjkiIGN5PSI4Ni40IiByPSI1LjYiIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjU4LjUiIGN5PSI3LjEiIHI9IjUuOSIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMzkuNyIgY3k9IjQxLjgiIHI9IjQuNyIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNTguOCIgY3k9IjgwLjgiIHI9IjYuNCIgZmlsbD0iIzhmOGY4YSIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNDIuNyIgY3k9IjIwOS4wIiByPSI0LjYiIGZpbGw9IiM4ZjhmOGEiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjgwLjAiIGN5PSIxNTIuNyIgcj0iNi45IiBmaWxsPSIjOGY4ZjhhIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIzNy4yIiBjeT0iMTIxLjIiIHI9IjcuOCIgZmlsbD0iI2M5YzljNCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjE2LjEiIGN5PSIxMzUuNyIgcj0iMi45IiBmaWxsPSIjYzljOWM0IiBvcGFjaXR5PSIwLjUiLz48L3N2Zz4=",
-    roughness: 0.25,
-    metalness: 0.08,
-  },
+//
+// Gerado (não digitado item a item) pra garantir o mesmo catálogo — mesmas
+// categorias, marcas e variantes — em toda construtora nova, com volume
+// suficiente pra nunca faltar material pronto ao cadastrar uma opção.
+interface ReferenciaMaterial {
+  categoria: (typeof CATEGORIAS_MATERIAL)[number];
+  marcas: (typeof MARCAS_SUGERIDAS)[number][];
+  variantes: string[];
+}
 
-  // Materiais dos itens PADRÃO de Vista Verde (00002) e Boulevard (00003) —
-  // mesmo raciocínio do mc-013/014/015 do Aurora acima: sem eles, o
-  // configurador 3D só aparece depois da primeira troca.
+const REFERENCIA_MATERIAIS: ReferenciaMaterial[] = [
   {
-    id: "mc-016",
-    construtoraId: "00002",
-    categoriaId: categoriaId("00002", "Piso"),
-    marcaId: marcaId("00002", "Portinari"),
-    fornecedorId: "forn-007",
-    modelo: "Standard 60×60",
-    sku: "PTN-STD-6060",
-    imagemUrl: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2Ij48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iI2M2Yjg5YyIvPjxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2Q3Y2RiOCIvPjxyZWN0IHg9IjY2IiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjNmI4OWMiLz48cmVjdCB4PSIxMzAiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2Q3Y2RiOCIvPjxyZWN0IHg9IjE5NCIgeT0iMiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzZiODljIi8+PHJlY3QgeD0iMiIgeT0iNjYiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2M2Yjg5YyIvPjxyZWN0IHg9IjY2IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZDdjZGI4Ii8+PHJlY3QgeD0iMTMwIiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzZiODljIi8+PHJlY3QgeD0iMTk0IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZDdjZGI4Ii8+PHJlY3QgeD0iMiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNkN2NkYjgiLz48cmVjdCB4PSI2NiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjNmI4OWMiLz48cmVjdCB4PSIxMzAiIHk9IjEzMCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZDdjZGI4Ii8+PHJlY3QgeD0iMTk0IiB5PSIxMzAiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2M2Yjg5YyIvPjxyZWN0IHg9IjIiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzZiODljIi8+PHJlY3QgeD0iNjYiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZDdjZGI4Ii8+PHJlY3QgeD0iMTMwIiB5PSIxOTQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2M2Yjg5YyIvPjxyZWN0IHg9IjE5NCIgeT0iMTk0IiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNkN2NkYjgiLz48L3N2Zz4=",
-    roughness: 0.6,
-    metalness: 0,
+    categoria: "Piso",
+    marcas: ["Portobello", "Eliane", "Portinari", "Incepa", "Cecafi"],
+    variantes: [
+      "Acetinado 60×60 Bege", "Acetinado 60×60 Cinza", "Polido 80×80 Branco", "Polido 80×80 Grafite",
+      "Amadeirado Deck 20×120", "Marmorizado 90×90", "Externo Antiderrapante 45×45", "Grande Formato 120×120",
+      "Rústico 60×60 Areia", "Retificado 80×80 Off-White",
+    ],
   },
   {
-    id: "mc-017",
-    construtoraId: "00002",
-    categoriaId: categoriaId("00002", "Bancada"),
-    marcaId: marcaId("00002", "Incepa"),
-    fornecedorId: "forn-007",
-    modelo: "Granito Verde Ubatuba",
-    sku: "GRN-UBATUBA",
-    imagemUrl: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2Ij48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iIzRmNWI1YSIvPjxjaXJjbGUgY3g9IjEyNS41IiBjeT0iMTQzLjYiIHI9IjEuOCIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNjIuNSIgY3k9IjExMy41IiByPSIzLjAiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjIwLjEiIGN5PSIyMjUuMCIgcj0iMy4zIiBmaWxsPSIjOGZhM2EwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxMDUuMiIgY3k9IjcyLjgiIHI9IjMuOCIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTY4LjMiIGN5PSIxOS42IiByPSIzLjAiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjYwLjIiIGN5PSIxNzIuMCIgcj0iMi4wIiBmaWxsPSIjOGZhM2EwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxNDMuNSIgY3k9IjEyNC43IiByPSIyLjAiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjEyLjgiIGN5PSIyNDAuNCIgcj0iNC40IiBmaWxsPSIjOGZhM2EwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIzMC45IiBjeT0iMTEzLjciIHI9IjQuNCIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNDguNCIgY3k9IjEwNy4zIiByPSIzLjIiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjE3Mi4wIiBjeT0iNzEuOSIgcj0iMi4wIiBmaWxsPSIjOGZhM2EwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIyNTIuMyIgY3k9IjExNC4xIiByPSIyLjIiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjE0MC4wIiBjeT0iODQuNiIgcj0iMi4wIiBmaWxsPSIjOGZhM2EwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxOTcuOCIgY3k9IjkwLjAiIHI9IjIuNiIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjAuNCIgY3k9IjIzNy4xIiByPSIyLjIiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjIyNi4zIiBjeT0iMTIwLjUiIHI9IjIuMiIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTU0LjQiIGN5PSIxMDIuOCIgcj0iMy44IiBmaWxsPSIjOGZhM2EwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxNjcuMSIgY3k9IjM0LjgiIHI9IjIuMiIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTE1LjMiIGN5PSIyMy4xIiByPSIxLjYiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjEwNS41IiBjeT0iMTc0LjMiIHI9IjMuNCIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjQ0LjUiIGN5PSI4My4yIiByPSIyLjgiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjEyNi45IiBjeT0iMTEyLjMiIHI9IjQuMCIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTE1LjQiIGN5PSIxMTIuNSIgcj0iMi4zIiBmaWxsPSIjOGZhM2EwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSI2MC42IiBjeT0iMTkwLjIiIHI9IjEuOSIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNjkuMiIgY3k9IjE5Ni4zIiByPSI0LjEiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjI0Ny45IiBjeT0iMjM3LjMiIHI9IjQuMSIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTkxLjMiIGN5PSIxNjMuOSIgcj0iMy4yIiBmaWxsPSIjOGZhM2EwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSI2LjIiIGN5PSI4Mi45IiByPSIyLjYiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjU1LjEiIGN5PSIxMDAuOCIgcj0iMy42IiBmaWxsPSIjOGZhM2EwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxODguNyIgY3k9IjY4LjMiIHI9IjQuNCIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMS44IiBjeT0iOTIuMSIgcj0iMy4zIiBmaWxsPSIjOGZhM2EwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxMTIuOSIgY3k9IjIyLjkiIHI9IjQuNSIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTE2LjgiIGN5PSIyMjMuMyIgcj0iMy4zIiBmaWxsPSIjOGZhM2EwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxMjAuMSIgY3k9IjMyLjAiIHI9IjMuOSIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjI5LjQiIGN5PSI2Ny43IiByPSIxLjYiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjM5LjUiIGN5PSIxODEuMCIgcj0iMy42IiBmaWxsPSIjOGZhM2EwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxNjkuMCIgY3k9IjIyMi42IiByPSIyLjIiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjIxMi42IiBjeT0iNDMuMiIgcj0iMS42IiBmaWxsPSIjOGZhM2EwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIyMC45IiBjeT0iNS40IiByPSIzLjEiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjIxMi43IiBjeT0iMjE1LjkiIHI9IjEuOSIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTI2LjUiIGN5PSIxMy4zIiByPSIyLjMiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjEyNS4wIiBjeT0iMTYuNCIgcj0iMi42IiBmaWxsPSIjOGZhM2EwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSI1OS4wIiBjeT0iNzUuOCIgcj0iMy45IiBmaWxsPSIjOGZhM2EwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIzNS4wIiBjeT0iNDIuMSIgcj0iMS41IiBmaWxsPSIjOGZhM2EwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxNTkuNyIgY3k9IjIyLjEiIHI9IjIuNyIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjcuOSIgY3k9IjEyMi40IiByPSIyLjciIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjIuMiIgY3k9IjE5My42IiByPSIyLjkiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjE4OS4xIiBjeT0iODYuNSIgcj0iNC4zIiBmaWxsPSIjOGZhM2EwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxODMuNSIgY3k9IjE2My42IiByPSIyLjMiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjkyLjAiIGN5PSIxOS44IiByPSI0LjEiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjIxLjIiIGN5PSIxNy41IiByPSIyLjEiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9Ijc3LjgiIGN5PSI3LjYiIHI9IjMuMyIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTEyLjUiIGN5PSI5Ni42IiByPSIzLjEiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjIzMi4wIiBjeT0iMTM1LjIiIHI9IjIuOCIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMzAuOCIgY3k9IjIzMC4xIiByPSIzLjUiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjEyNy43IiBjeT0iMjMyLjAiIHI9IjMuNSIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTE3LjQiIGN5PSIyNDcuNiIgcj0iNC4yIiBmaWxsPSIjOGZhM2EwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxMDYuNCIgY3k9IjEyNy40IiByPSIzLjYiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjIwMS41IiBjeT0iMjM0LjIiIHI9IjMuMSIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjUzLjQiIGN5PSIxNjIuNiIgcj0iNC4wIiBmaWxsPSIjOGZhM2EwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxMTIuNyIgY3k9IjE5LjMiIHI9IjQuNCIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTQyLjEiIGN5PSIxNjcuMCIgcj0iMi43IiBmaWxsPSIjOGZhM2EwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxOTIuMiIgY3k9IjIwMC4zIiByPSIzLjAiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjExMy43IiBjeT0iMjI1LjkiIHI9IjMuNyIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTMuMiIgY3k9Ijk0LjUiIHI9IjIuOSIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjUzLjYiIGN5PSIxNjguNyIgcj0iMi4wIiBmaWxsPSIjOGZhM2EwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxNzMuMyIgY3k9IjQzLjIiIHI9IjIuMSIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTM1LjEiIGN5PSI4MC42IiByPSIxLjYiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjI0NS42IiBjeT0iMTMxLjciIHI9IjEuNiIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iOTkuNiIgY3k9IjQ3LjEiIHI9IjMuNSIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNTkuNiIgY3k9IjE4OS40IiByPSIyLjQiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjIzMi40IiBjeT0iMTUzLjQiIHI9IjIuNyIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjEyLjUiIGN5PSI0NS43IiByPSIyLjUiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjEwNi44IiBjeT0iMjI4LjkiIHI9IjMuMiIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjEuOCIgY3k9IjQxLjgiIHI9IjMuMCIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNjQuMiIgY3k9IjEwMi45IiByPSIzLjAiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9Ijg0LjYiIGN5PSI3LjAiIHI9IjEuNyIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTg5LjgiIGN5PSIxMTYuOCIgcj0iMy4yIiBmaWxsPSIjOGZhM2EwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIyMzAuNSIgY3k9IjI2LjgiIHI9IjIuNyIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNTcuMSIgY3k9Ijk5LjkiIHI9IjEuNiIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMzIuNiIgY3k9IjE4Ni41IiByPSI0LjEiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjcuNCIgY3k9IjEzNy40IiByPSIyLjMiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9Ijg4LjMiIGN5PSI1OS4zIiByPSIzLjciIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjEyNi4wIiBjeT0iNTguOSIgcj0iMy40IiBmaWxsPSIjOGZhM2EwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIyMjcuMCIgY3k9IjI0Mi43IiByPSIyLjYiIGZpbGw9IiM4ZmEzYTAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjI0Mi4yIiBjeT0iMjA1LjUiIHI9IjIuNyIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjIuMCIgY3k9IjUzLjkiIHI9IjEuOSIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTg1LjMiIGN5PSIxNTAuNiIgcj0iNC40IiBmaWxsPSIjOGZhM2EwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSI3MC43IiBjeT0iOTAuMyIgcj0iMi41IiBmaWxsPSIjOGZhM2EwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSI0MC44IiBjeT0iMjM1LjYiIHI9IjMuNCIgZmlsbD0iIzhmYTNhMCIgb3BhY2l0eT0iMC41Ii8+PC9zdmc+",
-    roughness: 0.35,
-    metalness: 0.05,
+    categoria: "Revestimento",
+    marcas: ["Portobello", "Eliane", "Portinari", "Incepa", "Quartzolit"],
+    variantes: [
+      "Acetinado Bege 30×60", "Acetinado Branco 30×60", "Fosco Cinza 45×90", "Brilhante Branco 30×90",
+      "Marmorizado Branco 60×60", "Concreto Grafite 60×60", "Metrô Branco 7,5×15", "Hexagonal Cinza 20×23",
+      "Grande Formato Cimentício 90×90", "Externo Antiderrapante 30×60",
+    ],
   },
   {
-    id: "mc-018",
-    construtoraId: "00002",
-    categoriaId: categoriaId("00002", "Piso"),
-    marcaId: marcaId("00002", "Celite"),
-    fornecedorId: "forn-007",
-    modelo: "Antiderrapante Cinza",
-    sku: "CLT-ANTID-CINZA",
-    imagemUrl: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2Ij48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iI2IzYmZiYyIvPjxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2M5ZDJkMCIvPjxyZWN0IHg9IjY2IiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNiM2JmYmMiLz48cmVjdCB4PSIxMzAiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2M5ZDJkMCIvPjxyZWN0IHg9IjE5NCIgeT0iMiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYjNiZmJjIi8+PHJlY3QgeD0iMiIgeT0iNjYiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2IzYmZiYyIvPjxyZWN0IHg9IjY2IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzlkMmQwIi8+PHJlY3QgeD0iMTMwIiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYjNiZmJjIi8+PHJlY3QgeD0iMTk0IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzlkMmQwIi8+PHJlY3QgeD0iMiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjOWQyZDAiLz48cmVjdCB4PSI2NiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNiM2JmYmMiLz48cmVjdCB4PSIxMzAiIHk9IjEzMCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzlkMmQwIi8+PHJlY3QgeD0iMTk0IiB5PSIxMzAiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2IzYmZiYyIvPjxyZWN0IHg9IjIiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYjNiZmJjIi8+PHJlY3QgeD0iNjYiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjYzlkMmQwIi8+PHJlY3QgeD0iMTMwIiB5PSIxOTQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2IzYmZiYyIvPjxyZWN0IHg9IjE5NCIgeT0iMTk0IiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjOWQyZDAiLz48L3N2Zz4=",
-    roughness: 0.6,
-    metalness: 0,
+    categoria: "Louças e Metais",
+    marcas: ["Roca", "Deca", "Celite", "Icasa", "Docol", "Hydra", "Fabrimar", "Lorenzetti", "Perflex"],
+    variantes: [
+      "Linha Aspen Branco", "Linha Izy Branco", "Monocomando Fit Cromado", "Monocomando Slim Black",
+      "Ducha Higiênica Cromada", "Torneira Gourmet Preta", "Vaso Sanitário Suspenso Branco", "Cuba de Apoio Branca",
+      "Assento Amortecido Branco", "Monocomando Class Grafite",
+    ],
   },
   {
-    id: "mc-019",
-    construtoraId: "00003",
-    categoriaId: categoriaId("00003", "Piso"),
-    marcaId: marcaId("00003", "Portinari"),
-    fornecedorId: "forn-006",
-    modelo: "Standard 60×60",
-    sku: "PTN-STD-6060",
-    imagemUrl: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2Ij48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iI2NiYjk5ZiIvPjxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2RkZDBjMCIvPjxyZWN0IHg9IjY2IiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjYmI5OWYiLz48cmVjdCB4PSIxMzAiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2RkZDBjMCIvPjxyZWN0IHg9IjE5NCIgeT0iMiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjY2JiOTlmIi8+PHJlY3QgeD0iMiIgeT0iNjYiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2NiYjk5ZiIvPjxyZWN0IHg9IjY2IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZGRkMGMwIi8+PHJlY3QgeD0iMTMwIiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjY2JiOTlmIi8+PHJlY3QgeD0iMTk0IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZGRkMGMwIi8+PHJlY3QgeD0iMiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNkZGQwYzAiLz48cmVjdCB4PSI2NiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNjYmI5OWYiLz48cmVjdCB4PSIxMzAiIHk9IjEzMCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZGRkMGMwIi8+PHJlY3QgeD0iMTk0IiB5PSIxMzAiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2NiYjk5ZiIvPjxyZWN0IHg9IjIiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjY2JiOTlmIi8+PHJlY3QgeD0iNjYiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZGRkMGMwIi8+PHJlY3QgeD0iMTMwIiB5PSIxOTQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2NiYjk5ZiIvPjxyZWN0IHg9IjE5NCIgeT0iMTk0IiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNkZGQwYzAiLz48L3N2Zz4=",
-    roughness: 0.6,
-    metalness: 0,
+    categoria: "Bancada",
+    marcas: ["Dekton", "Silestone", "Quartzolit"],
+    variantes: [
+      "Branco Ibiza", "Cinza Corumbá", "Preto Absoluto", "Bege Aracaju", "Grafite Ferro",
+      "Sirius", "Kalahari", "Trance", "Blanco Zeus", "Nero Marquina",
+    ],
   },
   {
-    id: "mc-020",
-    construtoraId: "00003",
-    categoriaId: categoriaId("00003", "Bancada"),
-    marcaId: marcaId("00003", "Incepa"),
-    fornecedorId: "forn-006",
-    modelo: "Granito Preto São Gabriel",
-    sku: "GRN-SGABRIEL",
-    imagemUrl: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2Ij48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iIzNmM2Y0MiIvPjxjaXJjbGUgY3g9IjEyNS41IiBjeT0iMTQzLjYiIHI9IjEuOCIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNjIuNSIgY3k9IjExMy41IiByPSIzLjAiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjIwLjEiIGN5PSIyMjUuMCIgcj0iMy4zIiBmaWxsPSIjNmI2YjcwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxMDUuMiIgY3k9IjcyLjgiIHI9IjMuOCIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTY4LjMiIGN5PSIxOS42IiByPSIzLjAiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjYwLjIiIGN5PSIxNzIuMCIgcj0iMi4wIiBmaWxsPSIjNmI2YjcwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxNDMuNSIgY3k9IjEyNC43IiByPSIyLjAiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjEyLjgiIGN5PSIyNDAuNCIgcj0iNC40IiBmaWxsPSIjNmI2YjcwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIzMC45IiBjeT0iMTEzLjciIHI9IjQuNCIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNDguNCIgY3k9IjEwNy4zIiByPSIzLjIiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjE3Mi4wIiBjeT0iNzEuOSIgcj0iMi4wIiBmaWxsPSIjNmI2YjcwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIyNTIuMyIgY3k9IjExNC4xIiByPSIyLjIiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjE0MC4wIiBjeT0iODQuNiIgcj0iMi4wIiBmaWxsPSIjNmI2YjcwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxOTcuOCIgY3k9IjkwLjAiIHI9IjIuNiIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjAuNCIgY3k9IjIzNy4xIiByPSIyLjIiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjIyNi4zIiBjeT0iMTIwLjUiIHI9IjIuMiIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTU0LjQiIGN5PSIxMDIuOCIgcj0iMy44IiBmaWxsPSIjNmI2YjcwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxNjcuMSIgY3k9IjM0LjgiIHI9IjIuMiIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTE1LjMiIGN5PSIyMy4xIiByPSIxLjYiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjEwNS41IiBjeT0iMTc0LjMiIHI9IjMuNCIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjQ0LjUiIGN5PSI4My4yIiByPSIyLjgiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjEyNi45IiBjeT0iMTEyLjMiIHI9IjQuMCIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTE1LjQiIGN5PSIxMTIuNSIgcj0iMi4zIiBmaWxsPSIjNmI2YjcwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSI2MC42IiBjeT0iMTkwLjIiIHI9IjEuOSIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNjkuMiIgY3k9IjE5Ni4zIiByPSI0LjEiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjI0Ny45IiBjeT0iMjM3LjMiIHI9IjQuMSIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTkxLjMiIGN5PSIxNjMuOSIgcj0iMy4yIiBmaWxsPSIjNmI2YjcwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSI2LjIiIGN5PSI4Mi45IiByPSIyLjYiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjU1LjEiIGN5PSIxMDAuOCIgcj0iMy42IiBmaWxsPSIjNmI2YjcwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxODguNyIgY3k9IjY4LjMiIHI9IjQuNCIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMS44IiBjeT0iOTIuMSIgcj0iMy4zIiBmaWxsPSIjNmI2YjcwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxMTIuOSIgY3k9IjIyLjkiIHI9IjQuNSIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTE2LjgiIGN5PSIyMjMuMyIgcj0iMy4zIiBmaWxsPSIjNmI2YjcwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxMjAuMSIgY3k9IjMyLjAiIHI9IjMuOSIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjI5LjQiIGN5PSI2Ny43IiByPSIxLjYiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjM5LjUiIGN5PSIxODEuMCIgcj0iMy42IiBmaWxsPSIjNmI2YjcwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxNjkuMCIgY3k9IjIyMi42IiByPSIyLjIiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjIxMi42IiBjeT0iNDMuMiIgcj0iMS42IiBmaWxsPSIjNmI2YjcwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIyMC45IiBjeT0iNS40IiByPSIzLjEiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjIxMi43IiBjeT0iMjE1LjkiIHI9IjEuOSIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTI2LjUiIGN5PSIxMy4zIiByPSIyLjMiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjEyNS4wIiBjeT0iMTYuNCIgcj0iMi42IiBmaWxsPSIjNmI2YjcwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSI1OS4wIiBjeT0iNzUuOCIgcj0iMy45IiBmaWxsPSIjNmI2YjcwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIzNS4wIiBjeT0iNDIuMSIgcj0iMS41IiBmaWxsPSIjNmI2YjcwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxNTkuNyIgY3k9IjIyLjEiIHI9IjIuNyIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjcuOSIgY3k9IjEyMi40IiByPSIyLjciIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjIuMiIgY3k9IjE5My42IiByPSIyLjkiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjE4OS4xIiBjeT0iODYuNSIgcj0iNC4zIiBmaWxsPSIjNmI2YjcwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxODMuNSIgY3k9IjE2My42IiByPSIyLjMiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjkyLjAiIGN5PSIxOS44IiByPSI0LjEiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjIxLjIiIGN5PSIxNy41IiByPSIyLjEiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9Ijc3LjgiIGN5PSI3LjYiIHI9IjMuMyIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTEyLjUiIGN5PSI5Ni42IiByPSIzLjEiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjIzMi4wIiBjeT0iMTM1LjIiIHI9IjIuOCIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMzAuOCIgY3k9IjIzMC4xIiByPSIzLjUiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjEyNy43IiBjeT0iMjMyLjAiIHI9IjMuNSIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTE3LjQiIGN5PSIyNDcuNiIgcj0iNC4yIiBmaWxsPSIjNmI2YjcwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxMDYuNCIgY3k9IjEyNy40IiByPSIzLjYiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjIwMS41IiBjeT0iMjM0LjIiIHI9IjMuMSIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjUzLjQiIGN5PSIxNjIuNiIgcj0iNC4wIiBmaWxsPSIjNmI2YjcwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxMTIuNyIgY3k9IjE5LjMiIHI9IjQuNCIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTQyLjEiIGN5PSIxNjcuMCIgcj0iMi43IiBmaWxsPSIjNmI2YjcwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxOTIuMiIgY3k9IjIwMC4zIiByPSIzLjAiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjExMy43IiBjeT0iMjI1LjkiIHI9IjMuNyIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTMuMiIgY3k9Ijk0LjUiIHI9IjIuOSIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjUzLjYiIGN5PSIxNjguNyIgcj0iMi4wIiBmaWxsPSIjNmI2YjcwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIxNzMuMyIgY3k9IjQzLjIiIHI9IjIuMSIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTM1LjEiIGN5PSI4MC42IiByPSIxLjYiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjI0NS42IiBjeT0iMTMxLjciIHI9IjEuNiIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iOTkuNiIgY3k9IjQ3LjEiIHI9IjMuNSIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNTkuNiIgY3k9IjE4OS40IiByPSIyLjQiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjIzMi40IiBjeT0iMTUzLjQiIHI9IjIuNyIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjEyLjUiIGN5PSI0NS43IiByPSIyLjUiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjEwNi44IiBjeT0iMjI4LjkiIHI9IjMuMiIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjEuOCIgY3k9IjQxLjgiIHI9IjMuMCIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNjQuMiIgY3k9IjEwMi45IiByPSIzLjAiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9Ijg0LjYiIGN5PSI3LjAiIHI9IjEuNyIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTg5LjgiIGN5PSIxMTYuOCIgcj0iMy4yIiBmaWxsPSIjNmI2YjcwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIyMzAuNSIgY3k9IjI2LjgiIHI9IjIuNyIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iNTcuMSIgY3k9Ijk5LjkiIHI9IjEuNiIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMzIuNiIgY3k9IjE4Ni41IiByPSI0LjEiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjcuNCIgY3k9IjEzNy40IiByPSIyLjMiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9Ijg4LjMiIGN5PSI1OS4zIiByPSIzLjciIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjEyNi4wIiBjeT0iNTguOSIgcj0iMy40IiBmaWxsPSIjNmI2YjcwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSIyMjcuMCIgY3k9IjI0Mi43IiByPSIyLjYiIGZpbGw9IiM2YjZiNzAiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjI0Mi4yIiBjeT0iMjA1LjUiIHI9IjIuNyIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMjIuMCIgY3k9IjUzLjkiIHI9IjEuOSIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTg1LjMiIGN5PSIxNTAuNiIgcj0iNC40IiBmaWxsPSIjNmI2YjcwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSI3MC43IiBjeT0iOTAuMyIgcj0iMi41IiBmaWxsPSIjNmI2YjcwIiBvcGFjaXR5PSIwLjUiLz48Y2lyY2xlIGN4PSI0MC44IiBjeT0iMjM1LjYiIHI9IjMuNCIgZmlsbD0iIzZiNmI3MCIgb3BhY2l0eT0iMC41Ii8+PC9zdmc+",
-    roughness: 0.35,
-    metalness: 0.05,
+    categoria: "Cuba",
+    marcas: ["Franke", "Blanco", "Tramontina"],
+    variantes: [
+      "Inox Simples 50×34", "Inox Dupla 68×34", "Inox Onda Gourmet", "Granito Composto Bege",
+      "Granito Composto Grafite", "Cerâmica Branca Sobrepor", "Cerâmica Encaixe Branca", "Inox Ampliada Gourmet",
+      "Inox Gourmet com Escorredor", "Cerâmica Bege Sobrepor",
+    ],
   },
   {
-    id: "mc-021",
-    construtoraId: "00003",
-    categoriaId: categoriaId("00003", "Piso"),
-    marcaId: marcaId("00003", "Celite"),
-    fornecedorId: "forn-006",
-    modelo: "Antiderrapante Off-White",
-    sku: "CLT-ANTID-OFFW",
-    imagemUrl: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2Ij48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iI2QwY2FiZiIvPjxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2UyZGVkNiIvPjxyZWN0IHg9IjY2IiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNkMGNhYmYiLz48cmVjdCB4PSIxMzAiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2UyZGVkNiIvPjxyZWN0IHg9IjE5NCIgeT0iMiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZDBjYWJmIi8+PHJlY3QgeD0iMiIgeT0iNjYiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2QwY2FiZiIvPjxyZWN0IHg9IjY2IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZTJkZWQ2Ii8+PHJlY3QgeD0iMTMwIiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZDBjYWJmIi8+PHJlY3QgeD0iMTk0IiB5PSI2NiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZTJkZWQ2Ii8+PHJlY3QgeD0iMiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNlMmRlZDYiLz48cmVjdCB4PSI2NiIgeT0iMTMwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNkMGNhYmYiLz48cmVjdCB4PSIxMzAiIHk9IjEzMCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZTJkZWQ2Ii8+PHJlY3QgeD0iMTk0IiB5PSIxMzAiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2QwY2FiZiIvPjxyZWN0IHg9IjIiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZDBjYWJmIi8+PHJlY3QgeD0iNjYiIHk9IjE5NCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZTJkZWQ2Ii8+PHJlY3QgeD0iMTMwIiB5PSIxOTQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2QwY2FiZiIvPjxyZWN0IHg9IjE5NCIgeT0iMTk0IiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNlMmRlZDYiLz48L3N2Zz4=",
-    roughness: 0.6,
-    metalness: 0,
+    categoria: "Porta",
+    marcas: ["Duratex", "Eucatex"],
+    variantes: [
+      "Lisa Freijó 35mm", "Lisa Branca 35mm", "Almofadada Freijó", "Almofadada Branca",
+      "Frisada Amadeirada", "Pivotante Preta", "De Correr Freijó", "Veneziana Branca",
+      "Lambril Amadeirado", "Blindada Reforçada",
+    ],
+  },
+  {
+    categoria: "Janela / Esquadria",
+    marcas: ["Sasazaki"],
+    variantes: [
+      "Linha Max Correr 2 Folhas", "Linha Max Correr 3 Folhas", "Basculante Branca", "Maxim-Ar Branca",
+      "Fixa com Vidro Temperado", "Veneziana de Alumínio", "Correr 4 Folhas Anodizada", "Guilhotina Branca",
+      "Pivotante Alumínio Preto", "Vitrô Basculante",
+    ],
+  },
+  {
+    categoria: "Box / Vidro",
+    marcas: ["Blindex"],
+    variantes: [
+      "Box Frontal Incolor 8mm", "Box de Canto Incolor 8mm", "Box Frontal Fumê 8mm", "Box de Canto Fumê 8mm",
+      "Espelho Bisotê 4mm", "Guarda-Corpo Incolor 10mm", "Divisória de Ambiente 10mm", "Box Angular Incolor 8mm",
+      "Porta Pivotante de Vidro 10mm", "Box Frontal Verde 8mm",
+    ],
+  },
+  {
+    categoria: "Pintura",
+    marcas: ["Suvinil", "Sherwin-Williams", "Coral"],
+    variantes: [
+      "Acrílico Fosco Branco Neve", "Acrílico Fosco Cinza Urbano", "Acrílico Acetinado Areia", "Látex Premium Off-White",
+      "Esmalte Sintético Branco", "Textura Grafiato Bege", "Acrílico Fosco Grafite", "Látex Premium Azul Sereno",
+      "Acrílico Semibrilho Branco Gelo", "Esmalte Fosco Preto",
+    ],
+  },
+  {
+    categoria: "Iluminação",
+    marcas: ["Taschibra"],
+    variantes: [
+      "Spot LED Redondo 7W 3000K", "Spot LED Quadrado 7W 4000K", "Painel LED Embutir 24W", "Fita LED 5m 3000K",
+      "Pendente Preto Fosco", "Arandela Branca Externa", "Luminária Trilho Preta", "Plafon LED Sobrepor 18W",
+      "Spot Direcionável 5W", "Luminária Pendente Dourada",
+    ],
+  },
+  {
+    categoria: "Tomada e Interruptor",
+    marcas: ["Tramontina"],
+    variantes: [
+      "Linha Liz Branca 10A", "Linha Liz Preta 10A", "Interruptor Simples Branco", "Interruptor Paralelo Branco",
+      "Tomada Dupla 20A Branca", "Tomada USB Branca", "Linha Rebite Preta", "Módulo 4×2 Branco",
+      "Interruptor Touch Preto", "Tomada RJ45 Branca",
+    ],
+  },
+  {
+    categoria: "Forro",
+    marcas: ["Tigre", "Duratex", "Eucatex"],
+    variantes: [
+      "Forro PVC Branco Liso", "Forro PVC Branco Frisado", "Forro de Gesso Liso", "Forro Modular Mineral 60×60",
+      "Forro PVC Amadeirado", "Sanca Aberta em Gesso", "Forro Drywall Standard", "Forro PVC Fresado",
+      "Forro Acústico Mineral", "Forro de Gesso com Sanca",
+    ],
+  },
+  {
+    categoria: "Rodapé",
+    marcas: ["Duratex", "Eucatex"],
+    variantes: [
+      "MDF Branco 7cm", "MDF Branco 10cm", "MDF Amadeirado 10cm", "MDF Amadeirado 15cm",
+      "Poliestireno Branco 7cm", "Alumínio Escovado 5cm", "MDF Preto Fosco 7cm", "PVC Branco 10cm",
+      "MDF Cinza Grafite 10cm", "Meia-Cana Branca 5cm",
+    ],
+  },
+  {
+    categoria: "Armário Planejado",
+    marcas: ["Todeschini", "Bertolini"],
+    variantes: [
+      "Living Connect Carvalho", "Living Connect Branco", "Cozinha Compacta Branca", "Cozinha Compacta Preto Fosco",
+      "Closet Modulado Off-White", "Home Office Compacto Carvalho", "Painel Ripado Amadeirado", "Cozinha Ilha Grafite",
+      "Guarda-Roupa Casal Branco", "Bancada com Gavetas Carvalho",
+    ],
+  },
+  {
+    categoria: "Eletrodoméstico",
+    marcas: ["Brastemp"],
+    variantes: [
+      "Cooktop 5 Bocas Inox", "Forno de Embutir 60L", "Coifa de Ilha Inox", "Coifa de Parede Inox",
+      "Micro-ondas de Embutir", "Adega Climatizada 46 Garrafas", "Lava-Louças 14 Serviços", "Depurador de Ar Inox",
+      "Cooktop de Indução 4 Zonas", "Forno e Micro-ondas Combinado",
+    ],
+  },
+  {
+    categoria: "Automação",
+    marcas: ["Intelbras"],
+    variantes: [
+      "Kit Interruptor Inteligente Wi-Fi", "Fechadura Inteligente Wi-Fi", "Câmera Inteligente Interna", "Central de Automação Residencial",
+      "Sensor de Presença Wi-Fi", "Tomada Inteligente Wi-Fi", "Cortina Motorizada Wi-Fi", "Campainha Inteligente com Vídeo",
+      "Sensor de Abertura Wi-Fi", "Assistente de Automação por Voz",
+    ],
+  },
+  {
+    categoria: "Ar-condicionado",
+    marcas: ["Springer"],
+    variantes: [
+      "Split Hi-Wall 9000 BTUs Inverter", "Split Hi-Wall 12000 BTUs Inverter", "Split Hi-Wall 18000 BTUs Inverter", "Split Hi-Wall 24000 BTUs Inverter",
+      "Multi Split 2 Ambientes", "Cassete 36000 BTUs", "Portátil 10000 BTUs", "Janela 7500 BTUs",
+      "Split Inverter Dual 12000 BTUs", "VRF Comercial Compacto",
+    ],
+  },
+  {
+    categoria: "Fechadura",
+    marcas: ["Papaiz", "Fischer"],
+    variantes: [
+      "Fechadura Digital Biométrica", "Fechadura Digital com Senha", "Fechadura Tetra Cromada", "Fechadura Rolete Cromada",
+      "Fechadura de Embutir Preta", "Dobradiça Reforçada Inox", "Fechadura Digital com App", "Trinco Multiponto",
+      "Fechadura Tetra Preta Fosca", "Fechadura de Sobrepor Cromada",
+    ],
   },
 ];
+
+// Volume por categoria: 10 variantes × 3 voltas (a 2ª e 3ª volta ganham
+// sufixo " 2"/" 3" pra não duplicar o nome) — 18 categorias × 30 = 540
+// materiais por construtora, o mesmo catálogo pras 3 construtoras.
+const MATERIAIS_POR_CATEGORIA = 30;
+
+// Imagem por modelo (não por categoria) — cada variante de material tem
+// sua própria foto na demo. Picsum com seed determinístico garante uma
+// foto estável (nunca quebra) por nome de modelo, sem precisar curar 1620
+// fotos reais (18 categorias × 30 × 3 construtoras) num seed de protótipo
+// — não é foto real do produto.
+const imagemDoModelo = (modelo: string): string => `https://picsum.photos/seed/${encodeURIComponent(modelo)}/200/150`;
+
+function gerarMateriaisDaConstrutora(construtoraId: string): MaterialCatalogItem[] {
+  const fornecedoresDaConstrutora = fornecedoresIniciais.filter((f) => f.construtoraId === construtoraId);
+  const itens: MaterialCatalogItem[] = [];
+  let seq = 0;
+  for (const ref of REFERENCIA_MATERIAIS) {
+    for (let i = 0; i < MATERIAIS_POR_CATEGORIA; i++) {
+      const marca = ref.marcas[i % ref.marcas.length];
+      const volta = Math.floor(i / ref.variantes.length);
+      const variante = ref.variantes[i % ref.variantes.length];
+      const modelo = volta > 0 ? `${variante} ${volta + 1}` : variante;
+      const fornecedor = fornecedoresDaConstrutora[seq % fornecedoresDaConstrutora.length];
+      seq += 1;
+      const catAbrev = ref.categoria.replace(/[^A-Za-zÀ-ÿ]/g, "").slice(0, 3).toUpperCase();
+      itens.push({
+        id: `mc-${construtoraId}-${String(seq).padStart(4, "0")}`,
+        construtoraId,
+        categoriaId: categoriaId(construtoraId, ref.categoria),
+        marcaId: marcaId(construtoraId, marca),
+        fornecedorId: fornecedor.id,
+        modelo,
+        sku: `${marca.slice(0, 3).toUpperCase()}-${catAbrev}-${String(seq).padStart(4, "0")}`,
+        imagemUrl: imagemDoModelo(modelo),
+      });
+    }
+  }
+  return itens;
+}
+
+export const materialCatalogInicial: MaterialCatalogItem[] = CONSTRUTORA_IDS.flatMap(gerarMateriaisDaConstrutora);
 
 export const solicitacoesIniciais: Solicitacao[] = [
   {

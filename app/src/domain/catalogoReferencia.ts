@@ -36,6 +36,7 @@ export const MARCAS_SUGERIDAS = [
   "Suvinil", "Sherwin-Williams", "Coral",
   "Todeschini", "Bertolini",
   "Fischer", "Buschbeck",
+  "Sasazaki", "Blindex", "Taschibra", "Brastemp", "Intelbras", "Springer", "Papaiz",
 ] as const;
 
 export const AMBIENTES_SUGERIDOS = [

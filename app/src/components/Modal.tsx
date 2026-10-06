@@ -26,22 +26,35 @@ export function Modal({
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  // `onClose` quase sempre chega como arrow function inline, recriada a
+  // cada render do pai — cada tecla digitada num campo do modal já causa
+  // esse re-render. Se `onClose` estivesse nas deps do efeito abaixo, ele
+  // rodaria de novo a cada tecla e refocaria o primeiro elemento
+  // (o botão de fechar, que vem antes dos campos no DOM) — por isso o
+  // efeito só reage a `open` de verdade, e lê o onClose atual via ref.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
 
   useEffect(() => {
     if (!open) return;
     previousFocusRef.current = document.activeElement as HTMLElement;
-    const first = panelRef.current?.querySelector<HTMLElement>("input, select, textarea, button");
+    // Exclui .modal-close: é um <button> e vem antes dos campos no DOM,
+    // então sem essa exclusão ele "ganhava" o foco inicial em vez do
+    // primeiro campo de verdade.
+    const first = panelRef.current?.querySelector<HTMLElement>("input, select, textarea, button:not(.modal-close)");
     first?.focus();
 
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onCloseRef.current();
     }
     document.addEventListener("keydown", onKeyDown);
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       previousFocusRef.current?.focus();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 

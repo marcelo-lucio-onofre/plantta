@@ -1,9 +1,11 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Building2, LayoutGrid, Package, SlidersHorizontal, CheckCircle2 } from "lucide-react";
 import { Breadcrumb } from "../components/Breadcrumb";
 import { JanelaBadge, NivelBadge, PrazoBadge } from "../components/Badge";
 import { ConstrutoraGroupHeader } from "../components/ConstrutoraGroupHeader";
+import { ImageThumb } from "../components/ImageThumb";
+import { MoedaInput } from "../components/MaskedInput";
 import { avaliarOpcao, avaliarParametrico, calcularJanelaPersonalizacao, fmtBRL, fmtSigned, saldoAllowanceGroup } from "../domain/calculations";
 import { useApp } from "../state/AppContext";
 import type { Brand, Vinculo } from "../domain/types";
@@ -33,13 +35,28 @@ function agrupar(vinculos: Vinculo[]) {
  * then área, then item, then option, then confirm. Ends by creating a
  * real Solicitacao (see AppContext.criarSolicitacao) and taking the client
  * straight to its detail/timeline.
+ *
+ * Também é acessada pela construtora, em nome de um cliente que não sabe
+ * usar o app — mesmo wizard, sem fork — via `?vinculoId=`, que pula o
+ * passo 0 (unidade já vem escolhida: da unidade vendida clicada na tela de
+ * Vendas, ou do modal "Criar personalização" na listagem de
+ * empreendimentos). Nesse caso o destino final é a página de aprovação da
+ * construtora, não "Minhas personalizações" do cliente (rota do portal,
+ * fora do alcance de quem está logado como construtora).
  */
 export function NovaPersonalizacaoPage() {
-  const { vinculos, catalogo, chooseOption, setParametrico, criarSolicitacao, selecionarVinculo, loginScopeConstrutoraId, vinculoChoices, customSubmissions, submitCustomMaterial } = useApp();
+  const { role, vinculos, catalogo, catalogoMateriais, chooseOption, setParametrico, criarSolicitacao, selecionarVinculo, loginScopeConstrutoraId, vinculoChoices, customSubmissions, submitCustomMaterial } = useApp();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const vinculoIdInicial = searchParams.get("vinculoId");
+  // `?vinculoId=` também é usado pelo cliente (link "Editar" em "Minhas
+  // unidades") pra pular direto pro passo 1 na própria unidade — só é "em
+  // benefício do cliente" (copy + destino de submit mudam) quando quem
+  // está logado é a construtora agindo por ele.
+  const emBeneficioDoCliente = Boolean(vinculoIdInicial) && role === "construtora";
 
-  const [step, setStep] = useState(0);
-  const [vinculoId, setVinculoId] = useState<string | null>(null);
+  const [step, setStep] = useState(vinculoIdInicial ? 1 : 0);
+  const [vinculoId, setVinculoId] = useState<string | null>(vinculoIdInicial);
   const [ambienteId, setAmbienteId] = useState<string | null>(null);
   const [itemId, setItemId] = useState<string | null>(null);
   const [opcaoId, setOpcaoId] = useState<string | null>(null);
@@ -48,12 +65,19 @@ export function NovaPersonalizacaoPage() {
   const [customNome, setCustomNome] = useState("");
   const [customRef, setCustomRef] = useState("");
   const [prop1Forn, setProp1Forn] = useState("");
-  const [prop1Valor, setProp1Valor] = useState("");
+  const [prop1Valor, setProp1Valor] = useState(0);
   const [prop2Forn, setProp2Forn] = useState("");
-  const [prop2Valor, setProp2Valor] = useState("");
+  const [prop2Valor, setProp2Valor] = useState(0);
   const [avisoAceito, setAvisoAceito] = useState(false);
 
+  useEffect(() => {
+    if (vinculoIdInicial) selecionarVinculo(vinculoIdInicial);
+  }, [vinculoIdInicial, selecionarVinculo]);
+
   const vinculo = vinculos.find((v) => v.id === vinculoId);
+  const materiaisDaConstrutora = vinculo ? catalogoMateriais.list(vinculo.construtoraId) : [];
+  const imagemDaOpcao = (opt: { materialCatalogItemId?: string }) =>
+    materiaisDaConstrutora.find((m) => m.id === opt.materialCatalogItemId)?.imagemUrl;
   const ambientes = vinculoId ? catalogo.getAmbientes(vinculoId) : [];
   const ambiente = ambientes.find((a) => a.id === ambienteId);
   const item = ambiente?.itens.find((i) => i.id === itemId);
@@ -92,9 +116,9 @@ export function NovaPersonalizacaoPage() {
     setCustomNome("");
     setCustomRef("");
     setProp1Forn("");
-    setProp1Valor("");
+    setProp1Valor(0);
     setProp2Forn("");
-    setProp2Valor("");
+    setProp2Valor(0);
     setAvisoAceito(false);
     setStep(3);
   }
@@ -123,7 +147,7 @@ export function NovaPersonalizacaoPage() {
       diferenca: avaliacao.diferenca,
       nivel: item.nivel,
     });
-    navigate(`/personalizacoes/${created.id}`);
+    navigate(emBeneficioDoCliente ? `/aprovacao/${created.id}` : `/personalizacoes/${created.id}`);
   }
 
   const meusVinculos = loginScopeConstrutoraId ? vinculos.filter((v) => v.construtoraId === loginScopeConstrutoraId) : vinculos;
@@ -132,8 +156,21 @@ export function NovaPersonalizacaoPage() {
 
   return (
     <div className="container container--narrow">
-      <Breadcrumb items={[{ label: "Personalizações", to: "/personalizacoes" }, { label: "Nova" }]} />
-      <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 20 }}>Nova personalização</h1>
+      <Breadcrumb
+        items={
+          emBeneficioDoCliente
+            ? [{ label: "Painel", to: "/painel" }, { label: "Nova personalização" }]
+            : [{ label: "Personalizações", to: "/personalizacoes" }, { label: "Nova" }]
+        }
+      />
+      <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 4 }}>Nova personalização</h1>
+      <div style={{ marginBottom: 16, minHeight: 1 }}>
+        {emBeneficioDoCliente && vinculo && (
+          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>
+            Em nome de <strong>{catalogo.getEmpreendimento(vinculo.id)?.comprador ?? vinculo.unidadeLabel}</strong> — {vinculo.empreendimentoNome}, {vinculo.unidadeLabel}
+          </p>
+        )}
+      </div>
 
       <div className="row gap-sm" style={{ marginBottom: 28, flexWrap: "wrap" }}>
         {STEPS.map((s, i) => {
@@ -283,21 +320,25 @@ export function NovaPersonalizacaoPage() {
                 {atualOpt && (
                   <button
                     type="button"
-                    className="card"
+                    className="card row gap-sm"
                     style={{
                       textAlign: "left",
+                      alignItems: "center",
                       cursor: "pointer",
                       border: opcaoId === atualOpt.id ? "2px solid var(--brand)" : "2px solid var(--rule-strong)",
                       background: "var(--paper)",
                     }}
                     onClick={() => setOpcaoId(atualOpt.id)}
                   >
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-soft)", textTransform: "uppercase", letterSpacing: ".03em", marginBottom: 6 }}>
-                      {chosenPreviamente ? "Em uso atualmente" : "Padrão do empreendimento"}
-                    </div>
-                    <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 2 }}>{atualOpt.nome}</div>
-                    <div className="mono text-soft" style={{ fontSize: 12 }}>
-                      {fmtBRL(atualOpt.preco)} {!chosenPreviamente && "(incluído no preço da unidade)"}
+                    {atualOpt.materialCatalogItemId && <ImageThumb url={imagemDaOpcao(atualOpt)} alt={atualOpt.nome} size={40} />}
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-soft)", textTransform: "uppercase", letterSpacing: ".03em", marginBottom: 6 }}>
+                        {chosenPreviamente ? "Em uso atualmente" : "Padrão do empreendimento"}
+                      </div>
+                      <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 2 }}>{atualOpt.nome}</div>
+                      <div className="mono text-soft" style={{ fontSize: 12 }}>
+                        {fmtBRL(atualOpt.preco)} {!chosenPreviamente && "(incluído no preço da unidade)"}
+                      </div>
                     </div>
                   </button>
                 )}
@@ -322,9 +363,12 @@ export function NovaPersonalizacaoPage() {
                           }}
                           onClick={() => setOpcaoId(opt.id)}
                         >
-                          <div>
-                            <div style={{ fontWeight: 600, fontSize: 14 }}>{opt.nome}</div>
-                            <div className="mono text-soft" style={{ fontSize: 12 }}>{opt.remocao ? "R$ 0 (remoção)" : fmtBRL(opt.preco)}</div>
+                          <div className="row gap-sm" style={{ alignItems: "center" }}>
+                            {opt.materialCatalogItemId && <ImageThumb url={imagemDaOpcao(opt)} alt={opt.nome} size={36} />}
+                            <div>
+                              <div style={{ fontWeight: 600, fontSize: 14 }}>{opt.nome}</div>
+                              <div className="mono text-soft" style={{ fontSize: 12 }}>{opt.remocao ? "R$ 0 (remoção)" : fmtBRL(opt.preco)}</div>
+                            </div>
                           </div>
                           <div style={{ textAlign: "right", flexShrink: 0 }}>
                             <div
@@ -345,24 +389,41 @@ export function NovaPersonalizacaoPage() {
               </div>
             );
           })()}
-          {!isParametrico && (() => {
+          {!isParametrico && item.permiteMaterialProprio !== false && (() => {
             const alreadySubmitted = Boolean(customSubmissions[item.id]);
             const canSubmitCustom = Boolean(
-              customNome.trim() && customRef.trim() && prop1Forn.trim() && prop1Valor.trim() && prop2Forn.trim() && prop2Valor.trim() && avisoAceito,
+              customNome.trim() && customRef.trim() && prop1Forn.trim() && prop1Valor > 0 && prop2Forn.trim() && prop2Valor > 0 && avisoAceito,
             );
             const handleSubmitCustom = () => {
-              if (!canSubmitCustom) return;
-              submitCustomMaterial({
+              if (!canSubmitCustom || !vinculo) return;
+              const materialProprio = {
                 itemId: item.id,
                 materialNome: customNome,
                 referencia: customRef,
                 propostas: [
-                  { fornecedor: prop1Forn, valor: prop1Valor },
-                  { fornecedor: prop2Forn, valor: prop2Valor },
+                  { fornecedor: prop1Forn, valor: fmtBRL(prop1Valor, 2) },
+                  { fornecedor: prop2Forn, valor: fmtBRL(prop2Valor, 2) },
                 ],
-                status: "enviado_para_analise",
+                status: "enviado_para_analise" as const,
                 avisoRiscoAceito: avisoAceito,
+              };
+              submitCustomMaterial(materialProprio);
+              const emp = catalogo.getEmpreendimento(vinculo.id);
+              const created = criarSolicitacao({
+                vinculoId: vinculo.id,
+                construtoraId: vinculo.construtoraId,
+                itemId: item.id,
+                item: item.nome,
+                unidade: vinculo.unidadeLabel,
+                torre: vinculo.torre,
+                cliente: emp?.comprador ?? "Cliente",
+                de: item.padrao,
+                para: `Material próprio: ${customNome}`,
+                diferenca: null,
+                nivel: 2,
+                materialProprio,
               });
+              navigate(emBeneficioDoCliente ? `/aprovacao/${created.id}` : `/personalizacoes/${created.id}`);
             };
             return (
               <div className="card" style={{ borderStyle: "dashed" }}>
@@ -402,7 +463,7 @@ export function NovaPersonalizacaoPage() {
                       </div>
                       <div>
                         <label className="label">Valor — proposta 1</label>
-                        <input className="input" value={prop1Valor} onChange={(e) => setProp1Valor(e.target.value)} placeholder="R$" />
+                        <MoedaInput value={prop1Valor} onChange={setProp1Valor} />
                       </div>
                       <div>
                         <label className="label">Fornecedor — proposta 2</label>
@@ -410,7 +471,7 @@ export function NovaPersonalizacaoPage() {
                       </div>
                       <div>
                         <label className="label">Valor — proposta 2</label>
-                        <input className="input" value={prop2Valor} onChange={(e) => setProp2Valor(e.target.value)} placeholder="R$" />
+                        <MoedaInput value={prop2Valor} onChange={setProp2Valor} />
                       </div>
                     </div>
                     <div style={{ fontSize: 12, color: "var(--ink-soft)", marginBottom: 16 }}>
@@ -522,6 +583,11 @@ export function NovaPersonalizacaoPage() {
               const isCredito = !isParametrico && Boolean(opcaoSelecionada?.remocao);
               return (
                 <>
+                  {opcaoSelecionada?.materialCatalogItemId && (
+                    <div className="row gap-sm" style={{ alignItems: "center", marginBottom: 8 }}>
+                      <ImageThumb url={imagemDaOpcao(opcaoSelecionada)} alt={opcaoSelecionada.nome} size={36} />
+                    </div>
+                  )}
                   <div className="text-soft" style={{ fontSize: 13, marginBottom: 8 }}>{av.de} → {av.para}</div>
                   {av.diferenca > 0 && (
                     <div className="row gap-xs" style={{ alignItems: "baseline" }}>

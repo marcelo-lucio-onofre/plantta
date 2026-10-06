@@ -8,6 +8,7 @@ import { Modal } from "./Modal";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { FormField } from "./FormField";
 import { useToast } from "./Toast";
+import { useLoading } from "../state/LoadingContext";
 import { required } from "../domain/validation";
 
 interface NomeItem {
@@ -48,6 +49,7 @@ export function SimpleCadastroPage({
   onRemover: (id: string) => void;
 }) {
   const toast = useToast();
+  const { runComLoading } = useLoading();
   const [query, setQuery] = useState("");
   const [modal, setModal] = useState<{ mode: "criar" | "editar"; id?: string; nome: string; error?: string } | null>(null);
   const [excluindo, setExcluindo] = useState<NomeItem | null>(null);
@@ -61,21 +63,25 @@ export function SimpleCadastroPage({
       setModal({ ...modal, error: err });
       return;
     }
-    if (modal.mode === "criar") {
-      onCriar(modal.nome.trim());
-      toast.success(`${capitalize(itemLabel)} criada.`);
-    } else if (modal.id) {
-      onAtualizar(modal.id, modal.nome.trim());
-      toast.success(`${capitalize(itemLabel)} atualizada.`);
-    }
-    setModal(null);
+    const criando = modal.mode === "criar";
+    const nome = modal.nome.trim();
+    const id = modal.id;
+    runComLoading(() => {
+      if (criando) onCriar(nome);
+      else if (id) onAtualizar(id, nome);
+    }, criando ? `Criando ${itemLabel}...` : `Salvando ${itemLabel}...`).then(() => {
+      toast.success(criando ? `${capitalize(itemLabel)} criada.` : `${capitalize(itemLabel)} atualizada.`);
+      setModal(null);
+    });
   }
 
   function confirmarExclusao() {
     if (!excluindo) return;
-    onRemover(excluindo.id);
-    toast.success(`${capitalize(itemLabel)} excluída.`);
-    setExcluindo(null);
+    const alvo = excluindo;
+    runComLoading(() => onRemover(alvo.id), `Excluindo ${itemLabel}...`).then(() => {
+      toast.success(`${capitalize(itemLabel)} excluída.`);
+      setExcluindo(null);
+    });
   }
 
   return (
@@ -95,7 +101,7 @@ export function SimpleCadastroPage({
 
       <DataTable
         columns={[
-          { key: "nome", header: "Nome", render: (i) => i.nome },
+          { key: "nome", header: "Nome", sortValue: (i) => i.nome, render: (i) => i.nome },
           {
             key: "uso",
             header: "Uso",

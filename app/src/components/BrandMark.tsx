@@ -1,22 +1,35 @@
+import type { CSSProperties } from "react";
+
 interface BrandMarkProps {
   size?: number;
-  color?: string;
   withLabel?: boolean;
+  /** Text sits on a dark background (white) vs a light one (`--ink`). The
+   * "tt" stays blue regardless — see the wordmark rule below. */
   light?: boolean;
 }
 
-/** The plantta ascending-dots mark. Kept identical to the original prototype
- * per instruction: name/brand stay as-is until a final brand decision. */
-export function BrandMark({ size = 22, color = "var(--green)", withLabel = true, light = true }: BrandMarkProps) {
+/**
+ * The plantta symbol (navy badge, gray "TT" posts) + wordmark. Wordmark
+ * rule — REGRA FIXA (design.md §3): whenever "plantta" appears as a brand
+ * mark, the two "tt" are always `--plantta-tt` (the icon's gray, not
+ * `--blue`); "plan"/"a" inherit the surrounding text color. Never override
+ * the "tt" color.
+ */
+export function BrandMark({ size = 22, withLabel = true, light = true }: BrandMarkProps) {
   return (
-    <span className="brandmark">
-      <svg width={size} height={size} viewBox="0 0 22 22" fill="none" style={{ flexShrink: 0 }}>
-        <circle cx="5" cy="17" r="2.3" fill={color} />
-        <circle cx="11" cy="10.5" r="2.3" fill={color} />
-        <circle cx="17" cy="4" r="2.3" fill={color} />
-        <path d="M5 17 L11 10.5 L17 4" stroke={color} strokeWidth="1.8" fill="none" />
-      </svg>
-      {withLabel && <span style={{ color: light ? "#fff" : "var(--ink)" }}>plantta</span>}
+    <span className="brandmark-lockup" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+      <img src="/brand/plantta-icon.png" alt="" width={size} height={size} style={{ flexShrink: 0, objectFit: "contain" }} />
+      {withLabel && <Wordmark style={{ color: light ? "#fff" : "var(--ink)" }} />}
+    </span>
+  );
+}
+
+/** `plan` + `tt` (always `--plantta-tt`) + `a` — use anywhere "plantta" is
+ * set as a brand wordmark instead of typing the word out. */
+export function Wordmark({ className, style }: { className?: string; style?: CSSProperties }) {
+  return (
+    <span className={className} style={{ fontFamily: "'Archivo Expanded','Archivo',sans-serif", fontWeight: 800, letterSpacing: "-0.01em", ...style }}>
+      plan<span style={{ color: "var(--plantta-tt)" }}>tt</span>a
     </span>
   );
 }

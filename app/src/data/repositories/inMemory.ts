@@ -9,6 +9,7 @@ import type {
   CadastroEmpreendimentoInput,
   Categoria,
   ContatoConstrutora,
+  Empreendimento,
   EmpreendimentoCadastrado,
   Fornecedor,
   Item,
@@ -18,11 +19,14 @@ import type {
   Planta,
   Solicitacao,
   StatusSolicitacao,
+  TipoAmbiente,
   UnidadeAssociada,
+  Vinculo,
 } from "../../domain/types";
 import { plantaKey } from "../../domain/calculations";
 import {
   allowanceGroupsPorPlanta,
+  ambientesIniciais,
   ambientesPorPlanta,
   categoriasIniciais,
   dashboardData,
@@ -30,7 +34,11 @@ import {
   empreendimentoAllianceBoulevard501,
   empreendimentoAllianceBoulevard1502,
   empreendimentoAllianceJardins,
+  empreendimentoAuroraSemAlteracao,
+  empreendimentoJangada,
   empreendimentoVistaVerde,
+  empreendimentoVistaVerdeNova,
+  engemaxBrand,
   fornecedoresIniciais,
   initialBrand,
   marcasIniciais,
@@ -41,6 +49,7 @@ import {
   vinculos,
 } from "../mockData";
 import type {
+  IAmbienteRepository,
   IBrandRepository,
   ICatalogoRepository,
   ICategoriaRepository,
@@ -91,7 +100,15 @@ const empreendimentoPorVinculo: Record<string, typeof empreendimento> = {
   "v-boulevard-501": empreendimentoAllianceBoulevard501,
   "v-boulevard-1502": empreendimentoAllianceBoulevard1502,
   "v-jardins-302": empreendimentoAllianceJardins,
+  "v-vistaverde-1502": empreendimentoVistaVerdeNova,
+  "v-aurora-305": empreendimentoAuroraSemAlteracao,
+  "v-jangada-402": empreendimentoJangada,
 };
+
+// Mesma ideia que empreendimentoPorVinculo acima, só que pra vínculos
+// criados em runtime (unidade vendida via Vendas — ver AppContext.
+// garantirVinculoDaUnidade), não pré-carregados no mock.
+const empreendimentoPorVinculoDinamico: Record<string, Empreendimento> = {};
 
 export class InMemoryCatalogoRepository implements ICatalogoRepository {
   // Empreendimentos registered via registrarEmpreendimento (fresh Cadastro,
@@ -100,7 +117,10 @@ export class InMemoryCatalogoRepository implements ICatalogoRepository {
   private cadastrados: { empreendimentoId: string; construtoraId: string; nome: string }[] = [];
 
   getEmpreendimento(vinculoId: string) {
-    return empreendimentoPorVinculo[vinculoId];
+    return empreendimentoPorVinculo[vinculoId] ?? empreendimentoPorVinculoDinamico[vinculoId];
+  }
+  registrarEmpreendimentoPorVinculo(vinculoId: string, dados: Empreendimento) {
+    empreendimentoPorVinculoDinamico[vinculoId] = dados;
   }
   getAmbientes(vinculoId: string) {
     const v = vinculos.find((v) => v.id === vinculoId);
@@ -179,6 +199,9 @@ export function makeCategoriaRepository(): ICategoriaRepository {
 export function makeMarcaRepository(): IMarcaRepository {
   return makeCrudRepo<Marca>(marcasIniciais, "marca");
 }
+export function makeAmbienteRepository(): IAmbienteRepository {
+  return makeCrudRepo<TipoAmbiente>(ambientesIniciais, "amb");
+}
 export function makeFornecedorRepository(): IFornecedorRepository {
   return makeCrudRepo<Fornecedor>(fornecedoresIniciais, "forn");
 }
@@ -207,19 +230,28 @@ export class InMemoryVinculoRepository implements IVinculoRepository {
   getById(id: string) {
     return vinculos.find((v) => v.id === id);
   }
+  upsert(vinculo: Vinculo) {
+    const i = vinculos.findIndex((v) => v.id === vinculo.id);
+    if (i >= 0) vinculos[i] = vinculo;
+    else vinculos.push(vinculo);
+  }
 }
 
 export class InMemoryBrandRepository implements IBrandRepository {
-  // Only Alliance ("00003") starts opted into white-label — matches the
-  // Alliance vínculos' own seed brand. Prado/Horizonte start unset (null),
-  // same as their vínculos' brand: null.
-  private brands: Record<string, Brand> = { "00003": { ...initialBrand } };
+  // Alliance ("00003") and Engemax ("00001") start opted into white-label —
+  // matches Alliance vínculos' own seed brand. Horizonte ("00002") starts
+  // unset (null), same as its vínculos' brand: null.
+  private brands: Record<string, Brand> = { "00001": { ...engemaxBrand }, "00003": { ...initialBrand } };
   getBrand(construtoraId: string) {
     return this.brands[construtoraId] ?? null;
   }
   saveBrand(construtoraId: string, brand: Brand) {
     this.brands[construtoraId] = brand;
     return brand;
+  }
+  getConstrutoraIdBySlug(slug: string) {
+    const entry = Object.entries(this.brands).find(([, b]) => b.slug === slug);
+    return entry ? entry[0] : null;
   }
 }
 
@@ -296,6 +328,14 @@ export class InMemorySolicitacaoRepository implements ISolicitacaoRepository {
     }
     return { ...found };
   }
+
+  registrarCustosExtras(id: string, valorMaterialEscolhido: number, custosExtras: Solicitacao["custosExtras"]) {
+    const found = this.items.find((s) => s.id === id);
+    if (!found) return undefined;
+    found.custosExtras = custosExtras;
+    found.diferenca = valorMaterialEscolhido + (custosExtras ?? []).reduce((n, c) => n + c.valor, 0);
+    return { ...found };
+  }
 }
 
 export class InMemoryEmpreendimentoCadastroRepository implements IEmpreendimentoCadastroRepository {
@@ -333,6 +373,7 @@ export const repositories = {
   materiais: makeMaterialCatalogoRepository(),
   categorias: makeCategoriaRepository(),
   marcas: makeMarcaRepository(),
+  ambientes: makeAmbienteRepository(),
   fornecedores: makeFornecedorRepository(),
   pessoas: makePessoaRepository(),
   unidades: new InMemoryUnidadeRepository(),

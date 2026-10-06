@@ -100,7 +100,7 @@ export function resumirUnidade(solicitacoes: Solicitacao[], vinculoId: string, v
     if (s.vinculoId !== vinculoId || !s.diferenca) continue;
     const valor = isRemocao(s) ? -s.diferenca : s.diferenca;
     if (s.status === "aprovado") totalAprovado += valor;
-    else if (s.status === "pendente" || s.status === "em_analise") totalPendente += valor;
+    else if (s.status === "pendente" || s.status === "em_analise" || s.status === "aguardando_pagamento") totalPendente += valor;
   }
   return { valorImovel, totalAprovado, totalPendente, totalGeral: valorImovel + totalAprovado + totalPendente };
 }
@@ -108,6 +108,7 @@ export function resumirUnidade(solicitacoes: Solicitacao[], vinculoId: string, v
 const statusLabels: Record<StatusSolicitacao, string> = {
   pendente: "Pendente",
   em_analise: "Em análise",
+  aguardando_pagamento: "Aguardando pagamento",
   aprovado: "Aprovado",
   recusado: "Recusado",
 };
@@ -333,11 +334,11 @@ export function resumirAlteracoes(
  * case-insensitively (e.g. "portobello" -> "Portobello"), so the same
  * marca/ambiente doesn't fork into multiple spellings in reports. Returns
  * the trimmed input unchanged when nothing matches — a genuinely new entry. */
-/** Total de unidades do empreendimento é sempre a soma pavimentos ×
- * unidades/pavimento de cada torre — nunca um número digitado à parte,
- * que dessincroniza assim que uma torre muda. */
-export function totalUnidadesTorres(torres: Pick<Torre, "pavimentos" | "unidadesPorPavimento">[]): number {
-  return torres.reduce((sum, t) => sum + t.pavimentos * t.unidadesPorPavimento, 0);
+/** Total de unidades do empreendimento é sempre a soma das unidades de
+ * cada pavimento de cada torre — nunca um número digitado à parte, que
+ * dessincroniza assim que uma torre muda. */
+export function totalUnidadesTorres(torres: Pick<Torre, "unidadesPorPavimento">[]): number {
+  return torres.reduce((sum, t) => sum + t.unidadesPorPavimento.reduce((s, n) => s + n, 0), 0);
 }
 
 /** Letra da torre pro número da unidade — primeira letra do nome
@@ -363,4 +364,14 @@ export function normalizarContraLista(valor: string, conhecidos: readonly string
   if (!v) return v;
   const match = conhecidos.find((c) => c.toLowerCase() === v.toLowerCase());
   return match ?? v;
+}
+
+const ALFABETO_SENHA = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789"; // sem 0/O/1/l/I — evita confusão na hora de digitar
+
+/** Senha de acesso gerada pro cliente no cadastro — 10 caracteres, sem
+ * dígitos/letras ambíguos entre si. */
+export function gerarSenhaAcesso(): string {
+  let senha = "";
+  for (let i = 0; i < 10; i++) senha += ALFABETO_SENHA[Math.floor(Math.random() * ALFABETO_SENHA.length)];
+  return senha;
 }
