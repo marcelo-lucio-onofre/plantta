@@ -37,7 +37,7 @@ test.describe("Construtora — Cadastro de empreendimento (wizard)", () => {
     await page.waitForURL("**/cadastro");
     const linha = page.locator("tbody tr", { hasText: "Residencial E2E Listagem" });
     await expect(linha).toBeVisible();
-    await linha.locator("button.table-icon-btn").click();
+    await linha.getByRole("button", { name: /Continuar cadastro de/ }).click();
     await page.waitForURL(/\/cadastro\//);
     await expect(page.getByText("Torres")).toBeVisible();
   });
@@ -81,18 +81,23 @@ test.describe("Construtora — Cadastro de empreendimento (wizard)", () => {
     await page.click('button:has-text("Continuar")');
 
     await page.click('button:has-text("Nova planta")');
+    // Ambientes agora são adicionados já no passo "Plantas" — o catálogo
+    // só mostra conteúdo pra quem tem ao menos um.
+    await page.getByRole("button", { name: "Ambiente", exact: true }).click();
     await page.click('button:has-text("Continuar")');
     await page.click('button:has-text("Continuar")');
 
-    await expect(page.getByText("Ambientes e itens")).toBeVisible();
-    await page.click('button:has-text("Novo ambiente")');
-    await expect(page.getByText("Nenhum ambiente cadastrado nesta planta ainda.")).toHaveCount(0);
+    await expect(page.getByText("Catálogo — itens e opções por ambiente")).toBeVisible();
+    await expect(page.getByText(/Nenhum ambiente cadastrado nesta planta ainda/)).toHaveCount(0);
 
     await page.locator('button:has-text("Item")').first().click();
-    await page.locator('button:has-text("Verba compartilhada neste ambiente")').first().click();
-    await expect(page.getByText(/item\(ns\) vinculado\(s\)/)).toBeVisible();
-
-    await page.click('button:has-text("Salvar catálogo")');
-    await expect(page.getByText("Alterações não salvas")).toHaveCount(0);
+    // O catálogo salva a cada edição (não há mais "Salvar catálogo") e a
+    // verba compartilhada deixou de ter UI aqui.
+    const nomeItem = page.locator('input[value="Novo item"]');
+    await expect(nomeItem).toBeVisible();
+    await nomeItem.fill("Piso da sala");
+    await page.click('button:has-text("Continuar")');
+    await page.click('button:has-text("Voltar")');
+    await expect(page.locator('input[value="Piso da sala"]')).toBeVisible();
   });
 });

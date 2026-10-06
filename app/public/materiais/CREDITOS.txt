@@ -30,3 +30,52 @@ bancada/07.jpg  <- ambientCG Granite001A
 bancada/08.jpg  <- ambientCG Terrazzo018
 bancada/09.jpg  <- ambientCG Travertine005
 bancada/10.jpg  <- ambientCG Tiles093
+
+--- Superfícies adicionais (CC0, ambientCG.com) ---
+pintura: Plaster001/002/003 (tingidos)
+forro: Plaster002, Plaster001, Metal049A, Plaster004, Wood095, Plaster003, Plaster002, Plaster001, Plaster004, Plaster003
+rodape: Metal049A, Plaster002, Wood048, Wood095, Plaster001, Metal055A, Wood051, Metal049A, Wood089, Plaster003
+porta: Wood049, Metal049A, Wood058, Plaster001, Wood060, Wood051, Wood094, Plaster003, Wood087, Wood066
+armario-planejado: Wood095, Metal049A, Plaster002, Wood051, Plaster001, Wood068, Wood087, Wood089, Metal049A, Wood050
+
+--- Fotos de produto (Wikimedia Commons; licenças indicadas, atribuição exigida em CC BY / CC BY-SA) ---
+cuba/01.jpg  File:HK 69 Pokfulam Road 錦明閣 King Ming Mansion 洗碗盤 Kitchen Sink July-2011.jpg — Wu Samkors — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:HK_69_Pokfulam_Road_%E9%8C%A6%E6%98%8E%E9%96%A3_King_Ming_Mansion_%E6%B4%97%E7%A2%97%E7%9B%A4_Kitchen_Sink_July-2011.jpg
+cuba/02.jpg  File:Chez moi 010.jpg — Julie Kertesz from Paris neighbourhood, France — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Chez_moi_010.jpg
+cuba/03.jpg  File:HK Central IFC 21th Floor - Double Cove Show Flat kitchen washing sink n water pipe tap Oct-2012.jpg — Famrnylongras — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:HK_Central_IFC_21th_Floor_-_Double_Cove_Show_Flat_kitchen_washing_sink_n_water_pipe_tap_Oct-2012.jpg
+cuba/04.jpg  File:Custom Stainless Steel Sink by Havens.jpg — Havensmetal — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Custom_Stainless_Steel_Sink_by_Havens.jpg
+cuba/05.jpg  File:Jubilee Campus MMB «49 Southwell Hall.jpg — mattbuck (category) — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Jubilee_Campus_MMB_%C2%AB49_Southwell_Hall.jpg
+cuba/06.jpg  File:HK Greenview Villa 綠悠雅苑 Showflat 示位 Tower 2 Unit E Two-bedroom flat Kitchen Jan-2013.jpg — Heanailee — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:HK_Greenview_Villa_%E7%B6%A0%E6%82%A0%E9%9B%85%E8%8B%91_Showflat_%E7%A4%BA%E4%BD%8D_Tower_2_Unit_E_Two-bedroom_flat_Kitchen_Jan-2013.jpg
+cuba/07.jpg  File:Grifo monomando de cocina.jpg — Wiki LIC — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Grifo_monomando_de_cocina.jpg
+cuba/08.jpg  File:California Kitchen Farm Sink.jpg — Stilfehler — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:California_Kitchen_Farm_Sink.jpg
+cuba/09.jpg  File:Filling a pan with water.JPG — Philippe Alès — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Filling_a_pan_with_water.JPG
+cuba/10.jpg  File:Double Apron Sink.jpg — Stilfehler — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Double_Apron_Sink.jpg
+ar-condicionado/01.jpg  File:Air conditioner 3.jpg — Solijon Solayev — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Air_conditioner_3.jpg
+ar-condicionado/02.jpg  File:Air conditioner 2.jpg — Solijon Solayev — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Air_conditioner_2.jpg
+ar-condicionado/03.jpg  File:Aire acondicionado tipo Split.jpg — Chachahua8 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Aire_acondicionado_tipo_Split.jpg
+ar-condicionado/04.jpg  File:Air conditioning unit mounted on a wall with cooling pipe visible in a residential setting.jpg — Shixart1985 — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Air_conditioning_unit_mounted_on_a_wall_with_cooling_pipe_visible_in_a_residential_setting.jpg
+ar-condicionado/05.jpg  File:Air Conditioners.jpg — Eliomak Consults &amp; Engineering Ltd — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Air_Conditioners.jpg
+ar-condicionado/06.jpg  File:AirConditioner2.jpg — Raysonho @ Open Grid Scheduler / Grid Engine — CC0 — https://commons.wikimedia.org/wiki/File:AirConditioner2.jpg
+ar-condicionado/07.jpg  File:Air Conditioner Robot Smiling (34994862).jpg — Eric from Brooklyn, USA — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Air_Conditioner_Robot_Smiling_(34994862).jpg
+ar-condicionado/08.jpg  File:Air condition outdoors with blue sky in background.jpg — Shixart1985 — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Air_condition_outdoors_with_blue_sky_in_background.jpg
+ar-condicionado/09.jpg  File:A man`s hand holding a remote control adjusting air conditioner temperature at home.jpg — Shixart1985 — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:A_man%60s_hand_holding_a_remote_control_adjusting_air_conditioner_temperature_at_home.jpg
+ar-condicionado/10.jpg  File:AirConditioner3.jpg — Raysonho @ Open Grid Scheduler / Grid Engine — CC0 — https://commons.wikimedia.org/wiki/File:AirConditioner3.jpg
+fechadura/01.jpg  File:Yale Luna Pro+ 2026-08-12 Yale 01.jpg — P1898 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Yale_Luna_Pro%2B_2026-08-12_Yale_01.jpg
+fechadura/02.jpg  File:Nest Yale (cropped).jpg — AG20044018 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Nest_Yale_(cropped).jpg
+fechadura/03.jpg  File:Desi Utopic R Akıllı Kilit.jpg — Xxyanarxx — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Desi_Utopic_R_Ak%C4%B1ll%C4%B1_Kilit.jpg
+fechadura/04.jpg  File:Industry smart lock cylinder.jpg — Chole Wu — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Industry_smart_lock_cylinder.jpg
+fechadura/05.jpg  File:Master Lock Smart Lock 2026-08-12 Grade C copper 01.jpg — P1898 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Master_Lock_Smart_Lock_2026-08-12_Grade_C_copper_01.jpg
+fechadura/06.jpg  File:Master Lock Smart Lock 2026-08-12 Grade C copper 02.jpg — P1898 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Master_Lock_Smart_Lock_2026-08-12_Grade_C_copper_02.jpg
+fechadura/07.jpg  File:Nuki Smart Lock.jpg — Nuki Smart Lock (Flickr User) — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Nuki_Smart_Lock.jpg
+fechadura/08.jpg  File:Unlocking a smart lock via Bluetooth.png — Gettapkey — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Unlocking_a_smart_lock_via_Bluetooth.png
+fechadura/09.jpg  File:August 2nd-gen smart lock.jpg — username — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:August_2nd-gen_smart_lock.jpg
+fechadura/10.jpg  File:Nest Yale.jpg — AG20044018 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Nest_Yale.jpg
+box-vidro/01.jpg  File:Castorama aux Ulis le 19 avril 2017 - 41.jpg — Lionel Allorge — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Castorama_aux_Ulis_le_19_avril_2017_-_41.jpg
+box-vidro/02.jpg  File:After shower install.jpg — Robertosplumbing — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:After_shower_install.jpg
+box-vidro/08.jpg  File:HK bathing room with shower room Aug-2011.jpg — Cai1830 — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:HK_bathing_room_with_shower_room_Aug-2011.jpg
+box-vidro/09.jpg  File:HK WCN 灣仔北 Wan Chai North 香港會展 HKCEC 建造創新博覽會 Construction Innovation Expo 鋁遊家 AluHouse Technology 組裝合成建築 MiC construction 過渡性房屋 transitional housing December 2022 Px3 27.jpg — AKAMGO yalms — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:HK_WCN_%E7%81%A3%E4%BB%94%E5%8C%97_Wan_Chai_North_%E9%A6%99%E6%B8%AF%E6%9C%83%E5%B1%95_HKCEC_%E5%BB%BA%E9%80%A0%E5%89%B5%E6%96%B0%E5%8D%9A%E8%A6%BD%E6%9C%83_Construction_Innovation_Expo_%E9%8B%81%E9%81%8A%E5%AE%B6_AluHouse_Technology_%E7%B5%84%E8%A3%9D%E5%90%88%E6%88%90%E5%BB%BA%E7%AF%89_MiC_construction_%E9%81%8E%E6%B8%A1%E6%80%A7%E6%88%BF%E5%B1%8B_transitional_housing_December_2022_Px3_27.jpg
+eletrodomestico/01.jpg  File:High End Gas Cooktop.jpg — Stilfehler — CC0 — https://commons.wikimedia.org/wiki/File:High_End_Gas_Cooktop.jpg
+eletrodomestico/09.jpg  File:HK Central IFC showflat 凱柏峰 Villa Grada showflat 示範單位 April 2022 Px3 068.jpg — Prie822reraKWAN — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:HK_Central_IFC_showflat_%E5%87%B1%E6%9F%8F%E5%B3%B0_Villa_Grada_showflat_%E7%A4%BA%E7%AF%84%E5%96%AE%E4%BD%8D_April_2022_Px3_068.jpg
+loucas-metais/01.jpg  File:Bathroom basin tap.jpg — Smtzzz — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Bathroom_basin_tap.jpg
+loucas-metais/08.jpg  File:78-208P.jpg — Save More Plumbing &amp; Lighting — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:78-208P.jpg
+
+Cartões em _sem-foto/: arte genérica do projeto (sem foto de produto disponível com licença livre).

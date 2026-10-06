@@ -1194,15 +1194,48 @@ const MATERIAIS_POR_CATEGORIA = 30;
 // foto estável (nunca quebra) por nome de modelo, sem precisar curar 1620
 // fotos reais (18 categorias × 30 × 3 construtoras) num seed de protótipo
 // — não é foto real do produto.
-// Piso, Revestimento e Bancada têm foto real (texturas CC0 do ambientCG em
-// public/materiais/<categoria>/NN.jpg, ver CREDITOS.txt) — são as 3
-// categorias que o configurador 3D e o AR usam como superfície. As demais
-// categorias (louças, portas, eletros…) seguem com a foto de placeholder.
-const CATEGORIAS_COM_TEXTURA: Record<string, string> = { Piso: "piso", Revestimento: "revestimento", Bancada: "bancada" };
-const texturaDaVariante = (categoria: string, varianteIdx: number): string | undefined => {
-  const pasta = CATEGORIAS_COM_TEXTURA[categoria];
-  return pasta ? asset(`materiais/${pasta}/${String(varianteIdx + 1).padStart(2, "0")}.jpg`) : undefined;
+// Fotos reais por categoria, em public/materiais/<pasta>/NN.jpg (NN = posição
+// da variante em REFERENCIA_MATERIAIS) — texturas CC0 do ambientCG pras
+// superfícies e fotos do Wikimedia Commons pros produtos; autoria e licença
+// em public/materiais/CREDITOS.txt. Categorias/variantes sem foto livre
+// confiável caem num cartão neutro "foto indisponível" (_sem-foto/), nunca
+// numa imagem aleatória que não tem a ver com o produto.
+const TODAS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+const FOTOS_DA_CATEGORIA: Record<string, { pasta: string; variantes: number[] }> = {
+  Piso: { pasta: "piso", variantes: TODAS },
+  Revestimento: { pasta: "revestimento", variantes: TODAS },
+  Bancada: { pasta: "bancada", variantes: TODAS },
+  Pintura: { pasta: "pintura", variantes: TODAS },
+  Forro: { pasta: "forro", variantes: TODAS },
+  "Rodapé": { pasta: "rodape", variantes: TODAS },
+  Porta: { pasta: "porta", variantes: TODAS },
+  "Armário Planejado": { pasta: "armario-planejado", variantes: TODAS },
+  Cuba: { pasta: "cuba", variantes: TODAS },
+  "Ar-condicionado": { pasta: "ar-condicionado", variantes: TODAS },
+  Fechadura: { pasta: "fechadura", variantes: TODAS },
+  "Box / Vidro": { pasta: "box-vidro", variantes: [1, 2, 8, 9] },
+  "Eletrodoméstico": { pasta: "eletrodomestico", variantes: [1, 9] },
+  "Louças e Metais": { pasta: "loucas-metais", variantes: [1, 8] },
 };
+const CARTAO_SEM_FOTO: Record<string, string> = {
+  "Louças e Metais": "loucas-metais",
+  Cuba: "cuba",
+  "Janela / Esquadria": "janela-esquadria",
+  "Box / Vidro": "box-vidro",
+  "Iluminação": "iluminacao",
+  "Tomada e Interruptor": "tomada-interruptor",
+  "Eletrodoméstico": "eletrodomestico",
+  "Automação": "automacao",
+  "Ar-condicionado": "ar-condicionado",
+  Fechadura: "fechadura",
+};
+const fotoDaVariante = (categoria: string, varianteIdx: number): string | undefined => {
+  const foto = FOTOS_DA_CATEGORIA[categoria];
+  if (foto?.variantes.includes(varianteIdx + 1)) return asset(`materiais/${foto.pasta}/${String(varianteIdx + 1).padStart(2, "0")}.jpg`);
+  const cartao = CARTAO_SEM_FOTO[categoria];
+  return cartao ? asset(`materiais/_sem-foto/${cartao}.svg`) : undefined;
+};
+// Último recurso — só pra uma categoria nova que ainda não tem foto nem cartão.
 const imagemDoModelo = (modelo: string): string => `https://picsum.photos/seed/${encodeURIComponent(modelo)}/200/150`;
 
 function gerarMateriaisDaConstrutora(construtoraId: string): MaterialCatalogItem[] {
@@ -1226,7 +1259,7 @@ function gerarMateriaisDaConstrutora(construtoraId: string): MaterialCatalogItem
         fornecedorId: fornecedor.id,
         modelo,
         sku: `${marca.slice(0, 3).toUpperCase()}-${catAbrev}-${String(seq).padStart(4, "0")}`,
-        imagemUrl: texturaDaVariante(ref.categoria, i % ref.variantes.length) ?? imagemDoModelo(modelo),
+        imagemUrl: fotoDaVariante(ref.categoria, i % ref.variantes.length) ?? imagemDoModelo(modelo),
       });
     }
   }

@@ -12,7 +12,7 @@ test.describe("Construtora — Categorias, Marcas e Fornecedores", () => {
     await expect(page.getByText("Categoria criada.")).toBeVisible();
 
     await page.fill('input[placeholder="Buscar categoria..."]', "Categoria E2E");
-    await expect(page.getByText("Categoria E2E")).toBeVisible();
+    await expect(page.locator("tbody").getByText("Categoria E2E")).toBeVisible();
 
     await page.click('button[aria-label="Editar Categoria E2E"]');
     await page.fill("#nome-cadastro", "Categoria E2E Editada");
@@ -55,14 +55,17 @@ test.describe("Construtora — Categorias, Marcas e Fornecedores", () => {
     await page.click('button:has-text("Salvar fornecedor")');
 
     await page.waitForURL("**/catalogo/fornecedores");
-    await expect(page.getByText("Fornecedor E2E Ltda")).toBeVisible();
+    // A lista é paginada — busca pra garantir que o novo apareça.
+    await page.fill('input[placeholder*="Buscar razão social"]', "Fornecedor E2E");
+    await expect(page.locator("tbody").getByText("Fornecedor E2E Ltda")).toBeVisible();
 
     await page.click('button[aria-label="Editar Fornecedor E2E Ltda"]');
     await expect(page.getByRole("heading", { name: "Editar fornecedor" })).toBeVisible();
     await page.fill("#forn-nomeFantasia", "Fornecedor E2E");
     await page.click('button:has-text("Salvar fornecedor")');
     await page.waitForURL("**/catalogo/fornecedores");
-    await expect(page.getByText("Fornecedor E2E", { exact: true })).toBeVisible();
+    await page.fill('input[placeholder*="Buscar razão social"]', "Fornecedor E2E");
+    await expect(page.locator("tbody").getByText("Fornecedor E2E", { exact: true })).toBeVisible();
   });
 
   test("lista fornecedores e busca por nome", async ({ page }) => {

@@ -12,24 +12,25 @@ test.describe("Construtora — Painel e Aprovação", () => {
     await page.click('button:has-text("Todos")');
   });
 
-  test("aprova uma solicitação e chega ao termo pelo link da própria aprovação", async ({ page }) => {
+  test("aprova tecnicamente uma solicitação e fica aguardando o pagamento do cliente", async ({ page }) => {
     await loginConstrutora(page);
-    await page.click('a:has-text("SOL-001")');
+    // O card abre um modal; a aprovação fica em "Ver solicitação completa".
+    await page.click('button:has-text("SOL-001")');
+    await page.click('a:has-text("Ver solicitação completa")');
     await page.waitForURL("**/aprovacao/SOL-001");
     await expect(page.getByRole("heading", { name: "Aprovação técnica" })).toBeVisible();
 
     await page.click('button:has-text("Aprovar com assinatura digital")');
-    await expect(page.getByText("Aprovado ✓")).toBeVisible();
-
-    await page.click('a:has-text("Ver termo de alteração")');
-    await page.waitForURL("**/termo/v-aurora-1204");
-    await expect(page.getByText("TERMO DE ALTERAÇÃO", { exact: true })).toBeVisible();
-    await expect(page.getByText("Standard 60×60")).toBeVisible();
+    // Aprovação técnica não encerra: a solicitação fica aguardando o
+    // pagamento do cliente (confirmado depois pela construtora no Painel).
+    await expect(page.getByText("Aguardando pagamento do cliente")).toBeVisible();
   });
 
   test("recusa uma solicitação", async ({ page }) => {
     await loginConstrutora(page);
-    await page.click('a:has-text("SOL-002")');
+    // O card abre um modal; a aprovação fica em "Ver solicitação completa".
+    await page.click('button:has-text("SOL-002")');
+    await page.click('a:has-text("Ver solicitação completa")');
     await page.waitForURL("**/aprovacao/SOL-002");
     await page.click('button:has-text("Recusar com justificativa")');
     await expect(page.getByText("Recusado", { exact: true })).toBeVisible();
