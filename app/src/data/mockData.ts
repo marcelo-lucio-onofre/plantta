@@ -726,23 +726,39 @@ function vincularMateriais(ambientesClone: Ambiente[], vinculos: Record<string, 
   return ambientesClone;
 }
 
+// Ids do catálogo gerado (gerarMateriaisDaConstrutora): categorias na ordem
+// de REFERENCIA_MATERIAIS, 30 itens cada — Piso 1–30, Revestimento 31–60,
+// Louças e Metais 61–90, Bancada 91–120. `n` = posição da variante na lista
+// (1–10) dentro da categoria; seq = deslocamento da categoria + n.
+const SEQ_BASE_MATERIAL = { Piso: 0, Revestimento: 30, Bancada: 90 } as const;
+function materialSeedId(construtoraId: string, categoria: keyof typeof SEQ_BASE_MATERIAL, n: number): string {
+  return `mc-${construtoraId}-${String(SEQ_BASE_MATERIAL[categoria] + n).padStart(4, "0")}`;
+}
+
+// Opção do template -> material gerado da própria construtora. Os ids
+// "mc-001…021" curados à mão sumiram quando o catálogo virou gerado; sem
+// este vínculo nenhuma opção resolvia foto e o 3D do ambiente não aparecia.
+function vinculosMateriaisSeed(cid: string): Record<string, Record<string, Record<string, string>>> {
+  return {
+    sala: { piso_sala: { p1: materialSeedId(cid, "Piso", 1), p2: materialSeedId(cid, "Piso", 3), p3: materialSeedId(cid, "Piso", 6) } },
+    cozinha: { bancada: { b1: materialSeedId(cid, "Bancada", 2), b2: materialSeedId(cid, "Bancada", 1), b3: materialSeedId(cid, "Bancada", 6) } },
+    banheiro: {
+      piso_banheiro: { psb1: materialSeedId(cid, "Piso", 7), psb2: materialSeedId(cid, "Piso", 9) },
+      revestimento: { rv2: materialSeedId(cid, "Revestimento", 9) },
+    },
+    varanda: { piso_varanda: { pv1: materialSeedId(cid, "Piso", 7), pv2: materialSeedId(cid, "Piso", 5) } },
+  };
+}
+
 // Cada Planta tem seu próprio catálogo, completamente independente —
 // editar a Planta A via CatalogoPage nunca toca a Planta B nem outro
 // empreendimento. Chaveado por `plantaKey(empreendimentoId, plantaId)`.
 export const ambientesPorPlanta: Record<string, Ambiente[]> = {
-  [plantaKey("00001", "planta-a")]: ambientes,
+  [plantaKey("00001", "planta-a")]: vincularMateriais(clonar(ambientes), vinculosMateriaisSeed("00001")),
   [plantaKey("00001", "planta-b")]: ambientesPlantaBAurora,
-  [plantaKey("00002", "planta-unica")]: vincularMateriais(clonar(ambientes), {
-    sala: { piso_sala: { p1: "mc-016", p2: "mc-009" } },
-    cozinha: { bancada: { b1: "mc-017", b3: "mc-010" } }, // b3 = "Dekton Sirius", mc-010 é Dekton Sirius
-    banheiro: { piso_banheiro: { psb1: "mc-018", psb2: "mc-009" } },
-  }),
-  [plantaKey("00003", "planta-unica")]: vincularMateriais(clonar(ambientes), {
-    sala: { piso_sala: { p1: "mc-019", p2: "mc-005" } },
-    cozinha: { bancada: { b1: "mc-020", b2: "mc-007" } }, // b2 = "Quartzo Branco Ibiza", mc-007 é Silestone Branco Ibiza
-    banheiro: { piso_banheiro: { psb1: "mc-021", psb2: "mc-005" }, revestimento: { rv2: "mc-006" } },
-  }),
-  [plantaKey("00004", "planta-unica")]: clonar(ambientes),
+  [plantaKey("00002", "planta-unica")]: vincularMateriais(clonar(ambientes), vinculosMateriaisSeed("00002")),
+  [plantaKey("00003", "planta-unica")]: vincularMateriais(clonar(ambientes), vinculosMateriaisSeed("00003")),
+  [plantaKey("00004", "planta-unica")]: vincularMateriais(clonar(ambientes), vinculosMateriaisSeed("00003")),
 };
 
 export const allowanceGroupsPorPlanta: Record<string, AllowanceGroup[]> = {
