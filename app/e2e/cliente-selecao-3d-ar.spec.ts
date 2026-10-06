@@ -21,12 +21,12 @@ test.describe("Cliente — Seleção com preview 3D e AR", () => {
     // troca — o cliente vê "como já está" antes de decidir mudar algo.
     await page.click('button:has-text("Ver Banheiro Suíte completo em 3D")');
     await expect(page.locator("canvas")).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText(/Piso: Antiderrapante Bege/)).toBeVisible();
+    await expect(page.getByText(/Piso: Externo Antiderrapante 45×45/)).toBeVisible();
 
     // Troca o material com o painel 3D ainda aberto — a cena atualiza ao
     // vivo, sem precisar fechar/reabrir o preview.
     await page.click('button:has-text("Porcelanato Antiderrapante Areia")');
-    await expect(page.getByText(/Piso: Antiderrapante Areia/)).toBeVisible();
+    await expect(page.getByText(/Piso: Rústico 60×60 Areia/)).toBeVisible();
     await expect(page.locator("canvas")).toBeVisible();
   });
 
@@ -37,7 +37,7 @@ test.describe("Cliente — Seleção com preview 3D e AR", () => {
     await expect(page.getByText(/Revestimento:/)).toHaveCount(0);
 
     await page.click('button:has-text("Porcelanato Off-White Grande Formato")');
-    await expect(page.getByText(/Revestimento: Off-White Grande Formato/)).toBeVisible();
+    await expect(page.getByText(/Revestimento: Grande Formato Cimentício 90×90/)).toBeVisible();
   });
 
   test("ambiente com bancada (cozinha) usa a geometria real da planta", async ({ page }) => {
