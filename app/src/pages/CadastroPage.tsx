@@ -1,11 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Building, Building2, FileStack, CheckCircle2, Grid3x3, Layers, Package, Plus, Trash2 } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { JanelaBadge } from "../components/Badge";
 import { CatalogoPlantaEditor, PlantasManager, UnidadesHeatmap } from "../components/CatalogoAuthoring";
+import { MaskedInput } from "../components/MaskedInput";
 import { useApp } from "../state/AppContext";
+import { useLoading } from "../state/LoadingContext";
 import { deInputDate, paraInputDate, totalUnidadesTorres } from "../domain/calculations";
+import { maskCEP } from "../domain/mask";
+import { mockEnderecoPorCep } from "../domain/cepMock";
 import type { ArquivoCadastro, CategoriaArquivo, StatusComercialEmpreendimento, TipoEmpreendimento, Torre } from "../domain/types";
 
 interface CategoriaMeta {
@@ -35,12 +39,42 @@ const TIPOS: TipoEmpreendimento[] = ["Residencial", "Comercial", "Misto", "Lotea
 
 const gerarIdTorre = () => `torre-${Date.now()}-${Math.round(Math.random() * 10000)}`;
 
-/** Torres do empreendimento — pavimentos e unidades por pavimento ficam
- * por torre (nem sempre são iguais entre torres), total de unidades é
+/** Input numérico com estado local — deixa o campo vazio enquanto o usuário
+ * apaga e redigita (ex.: trocar "1" por "12"). Só valida/aplica o mínimo
+ * quando o campo perde o foco; um input controlado direto pelo valor
+ * clampado reescreve o dígito a cada tecla e trava em "1". */
+function NumeroInput({ value, min, disabled, onCommit }: { value: number; min: number; disabled: boolean; onCommit: (n: number) => void }) {
+  const [raw, setRaw] = useState(String(value));
+  useEffect(() => setRaw(String(value)), [value]);
+  return (
+    <input
+      className="input"
+      type="number"
+      min={min}
+      disabled={disabled}
+      value={raw}
+      onChange={(e) => {
+        setRaw(e.target.value);
+        if (e.target.value === "") return;
+        const n = Number(e.target.value);
+        if (!Number.isNaN(n)) onCommit(Math.max(min, n));
+      }}
+      onBlur={() => {
+        const n = Number(raw);
+        setRaw(String(Math.max(min, Number.isNaN(n) ? value : n)));
+      }}
+      placeholder="Unidades"
+    />
+  );
+}
+
+/** Torres do empreendimento — pavimentos ficam por torre (nem sempre são
+ * iguais entre torres), e cada pavimento tem sua própria quantidade de
+ * unidades (raramente igual em todos os pavimentos). Total de unidades é
  * sempre derivado, nunca digitado à parte. */
 function TorresManager({ torres, onChange, disabled }: { torres: Torre[]; onChange: (torres: Torre[]) => void; disabled: boolean }) {
   function addTorre() {
-    onChange([...torres, { id: gerarIdTorre(), nome: `Torre ${String.fromCharCode(65 + torres.length)}`, pavimentos: 1, unidadesPorPavimento: 1 }]);
+    onChange([...torres, { id: gerarIdTorre(), nome: `Torre ${String.fromCharCode(65 + torres.length)}`, unidadesPorPavimento: [1] }]);
   }
   function updateTorre(id: string, patch: Partial<Torre>) {
     onChange(torres.map((t) => (t.id === id ? { ...t, ...patch } : t)));
@@ -48,10 +82,20 @@ function TorresManager({ torres, onChange, disabled }: { torres: Torre[]; onChan
   function removeTorre(id: string) {
     onChange(torres.filter((t) => t.id !== id));
   }
+  function addPavimento(t: Torre) {
+    updateTorre(t.id, { unidadesPorPavimento: [...t.unidadesPorPavimento, 1] });
+  }
+  function updatePavimento(t: Torre, index: number, unidades: number) {
+    const proximo = t.unidadesPorPavimento.map((u, i) => (i === index ? Math.max(1, unidades) : u));
+    updateTorre(t.id, { unidadesPorPavimento: proximo });
+  }
+  function removePavimento(t: Torre, index: number) {
+    updateTorre(t.id, { unidadesPorPavimento: t.unidadesPorPavimento.filter((_, i) => i !== index) });
+  }
 
   return (
     <div>
-      <div className="row" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+      <div className="row gap-sm" style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
         <label className="label" style={{ margin: 0 }}>Torres / blocos *</label>
         {!disabled && (
           <button type="button" className="btn btn--sm" onClick={addTorre}>
@@ -62,38 +106,39 @@ function TorresManager({ torres, onChange, disabled }: { torres: Torre[]; onChan
       {torres.length === 0 && <div className="text-soft" style={{ fontSize: 12.5, marginBottom: 8 }}>Nenhuma torre ainda — adicione ao menos uma.</div>}
       <div className="stack gap-sm">
         {torres.map((t) => (
-          <div key={t.id} className="row gap-sm" style={{ alignItems: "center", border: "1px solid var(--rule)", borderRadius: 8, padding: "8px 10px", background: "var(--paper)", flexWrap: "wrap" }}>
-            <input className="input" style={{ flex: "1 1 140px" }} value={t.nome} disabled={disabled} onChange={(e) => updateTorre(t.id, { nome: e.target.value })} placeholder="Torre A" />
-            <div style={{ flex: "0 1 130px" }}>
-              <input
-                className="input"
-                type="number"
-                min={1}
-                disabled={disabled}
-                value={t.pavimentos}
-                onChange={(e) => updateTorre(t.id, { pavimentos: Math.max(1, Number(e.target.value)) })}
-                placeholder="Pavimentos"
-              />
+          <div key={t.id} style={{ border: "1px solid var(--rule)", borderRadius: 8, padding: "8px 10px", background: "var(--paper)" }}>
+            <div className="row gap-sm" style={{ alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
+              <input className="input" style={{ flex: "1 1 140px" }} value={t.nome} disabled={disabled} onChange={(e) => updateTorre(t.id, { nome: e.target.value })} placeholder="Torre A" />
+              <span className="mono" style={{ fontSize: 12, fontWeight: 600, marginLeft: "auto" }}>
+                = {t.unidadesPorPavimento.reduce((s, n) => s + n, 0)} unidades em {t.unidadesPorPavimento.length} pavimento{t.unidadesPorPavimento.length === 1 ? "" : "s"}
+              </span>
+              {!disabled && (
+                <button type="button" style={{ border: "none", background: "none", color: "var(--red-ink)", cursor: "pointer", padding: 4 }} onClick={() => removeTorre(t.id)} aria-label="Remover torre">
+                  <Trash2 className="sidebar-nav-icon" style={{ width: 14, height: 14 }} />
+                </button>
+              )}
             </div>
-            <span className="text-soft" style={{ fontSize: 12 }}>pavimentos ×</span>
-            <div style={{ flex: "0 1 150px" }}>
-              <input
-                className="input"
-                type="number"
-                min={1}
-                disabled={disabled}
-                value={t.unidadesPorPavimento}
-                onChange={(e) => updateTorre(t.id, { unidadesPorPavimento: Math.max(1, Number(e.target.value)) })}
-                placeholder="Unidades/pavimento"
-              />
+            <div className="stack gap-xs">
+              {t.unidadesPorPavimento.map((unidades, index) => (
+                <div key={index} className="row gap-xs" style={{ alignItems: "center" }}>
+                  <span className="text-soft" style={{ fontSize: 12, width: 90, flexShrink: 0 }}>Pavimento {index + 1}</span>
+                  <div style={{ flex: "0 1 130px" }}>
+                    <NumeroInput value={unidades} min={1} disabled={disabled} onCommit={(n) => updatePavimento(t, index, n)} />
+                  </div>
+                  <span className="text-soft" style={{ fontSize: 12 }}>unidades</span>
+                  {!disabled && t.unidadesPorPavimento.length > 1 && (
+                    <button type="button" style={{ border: "none", background: "none", color: "var(--red-ink)", cursor: "pointer", padding: 4 }} onClick={() => removePavimento(t, index)} aria-label="Remover pavimento">
+                      <Trash2 className="sidebar-nav-icon" style={{ width: 14, height: 14 }} />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {!disabled && (
+                <button type="button" className="btn btn--sm" style={{ alignSelf: "flex-start" }} onClick={() => addPavimento(t)}>
+                  <Plus className="sidebar-nav-icon" /> Pavimento
+                </button>
+              )}
             </div>
-            <span className="text-soft" style={{ fontSize: 12 }}>unid./pavimento</span>
-            <span className="mono" style={{ fontSize: 12, fontWeight: 600, marginLeft: "auto" }}>= {t.pavimentos * t.unidadesPorPavimento} unidades</span>
-            {!disabled && (
-              <button type="button" style={{ border: "none", background: "none", color: "var(--red-ink)", cursor: "pointer", padding: 4 }} onClick={() => removeTorre(t.id)} aria-label="Remover torre">
-                <Trash2 className="sidebar-nav-icon" style={{ width: 14, height: 14 }} />
-              </button>
-            )}
           </div>
         ))}
       </div>
@@ -138,6 +183,7 @@ function fmtSize(bytes: number): string {
 export function CadastroPage() {
   const { id } = useParams<{ id: string }>();
   const { vinculos, construtoraLogadaId, cadastros, cadastrarEmpreendimento, atualizarArquivosCadastro, catalogo, unidadesRepo, pessoasRepo } = useApp();
+  const { runComLoading } = useLoading();
   const navigate = useNavigate();
 
   /** Retomando um cadastro existente (`/cadastro/:id`, vindo da listagem) —
@@ -156,6 +202,19 @@ export function CadastroPage() {
   const [cidade, setCidade] = useState(existente?.cidade ?? "");
   const [uf, setUf] = useState(existente?.uf ?? "");
   const [cep, setCep] = useState(existente?.cep ?? "");
+  // Busca só dispara com CEP completo (8 dígitos) e no blur — não a cada
+  // tecla, senão troca de endereço a cada dígito digitado.
+  function handleCepBlur() {
+    if (cep.replace(/\D/g, "").length !== 8) return;
+    const mock = mockEnderecoPorCep(cep);
+    if (mock) {
+      runComLoading(() => {
+        setEndereco(mock.rua);
+        setCidade(mock.cidade);
+        setUf(mock.uf);
+      }, "Buscando endereço pelo CEP...");
+    }
+  }
   const [torres, setTorres] = useState<Torre[]>(existente?.torres ?? []);
   const [lancamento, setLancamento] = useState<string | null>(existente?.lancamento ?? null);
   const [previsaoEntrega, setPrevisaoEntrega] = useState<string | null>(existente?.previsaoEntrega ?? null);
@@ -185,7 +244,7 @@ export function CadastroPage() {
 
   const locked = Boolean(empreendimentoIdCriado);
   const nomePreenchido = Boolean(nome.trim());
-  const torresPreenchidas = torres.length > 0 && torres.every((t) => t.pavimentos > 0 && t.unidadesPorPavimento > 0);
+  const torresPreenchidas = torres.length > 0 && torres.every((t) => t.unidadesPorPavimento.length > 0 && t.unidadesPorPavimento.every((u) => u > 0));
   const doneCount = META.filter((m) => files[m.key].length > 0).length;
   const totalFiles = META.reduce((n, m) => n + files[m.key].length, 0);
   const plantas = empreendimentoIdCriado ? catalogo.listPlantas(empreendimentoIdCriado) : [];
@@ -317,12 +376,13 @@ export function CadastroPage() {
             <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-soft)", marginBottom: 4 }}>Localização</div>
             <div style={{ marginBottom: 8, maxWidth: 200 }}>
               <label className="label">CEP</label>
-              <input className="input" value={cep} onChange={(e) => setCep(e.target.value)} placeholder="00000-000" disabled={locked} />
+              <MaskedInput mask={maskCEP} maxDigits={8} value={cep} onChange={setCep} onBlur={handleCepBlur} placeholder="00000-000" disabled={locked} />
             </div>
             <div className="grid grid-2" style={{ gap: 8, marginBottom: 16 }}>
               <div style={{ gridColumn: "1 / -1" }}>
                 <label className="label">Endereço</label>
                 <input className="input" value={endereco} onChange={(e) => setEndereco(e.target.value)} placeholder="Rua, número" disabled={locked} />
+                <div className="text-soft" style={{ fontSize: 11, marginTop: 4 }}>Rua vem do CEP — complete com o número.</div>
               </div>
               <div>
                 <label className="label">Cidade</label>
@@ -459,7 +519,7 @@ export function CadastroPage() {
 
       {step === 3 && empreendimentoIdCriado && (
         <div className="stack gap-lg">
-          <UnidadesHeatmap empreendimentoId={empreendimentoIdCriado} torres={torres} plantas={plantas} />
+          <UnidadesHeatmap empreendimentoId={empreendimentoIdCriado} torres={torres} plantas={plantas} somentePintura />
           <div className="row" style={{ justifyContent: "space-between" }}>
             <button type="button" className="btn" onClick={() => setStep(2)}>Voltar</button>
             <button type="button" className="btn btn--primary" onClick={() => setStep(4)}>
@@ -478,7 +538,7 @@ export function CadastroPage() {
                   key={p.id}
                   type="button"
                   className="btn btn--sm"
-                  style={p.id === plantaId ? { background: "var(--green-bg)", borderColor: "var(--green)", color: "var(--green-ink)" } : {}}
+                  style={p.id === plantaId ? { background: "color-mix(in srgb, var(--brand) 14%, var(--card))", borderColor: "var(--brand)", color: "var(--brand)" } : {}}
                   onClick={() => setPlantaSelecionadaId(p.id)}
                 >
                   {p.nome}

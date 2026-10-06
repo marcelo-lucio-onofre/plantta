@@ -66,6 +66,7 @@ interface Agregado {
 const statusBadgeClass: Record<StatusItem, string> = {
   pendente: "badge--tecnico",
   em_analise: "badge--tecnico",
+  aguardando_pagamento: "badge--info",
   aprovado: "badge--simples",
   recusado: "badge--bloqueado",
   sem_alteracao: "badge--neutro",
@@ -74,9 +75,11 @@ const statusBadgeClass: Record<StatusItem, string> = {
 const labelStatusItem = (status: StatusItem): string => (status === "sem_alteracao" ? "Sem alteração" : statusLabel(status));
 
 /** Status de um conjunto de itens (ambiente ou unidade inteira): qualquer
- * coisa ainda em aberto domina, depois aprovado, depois tudo recusado. */
+ * coisa ainda em aberto domina, depois aguardando pagamento, depois
+ * aprovado, depois tudo recusado. */
 function agregar(itens: ItemNo[]): Agregado {
   if (itens.some((i) => i.status === "pendente" || i.status === "em_analise")) return { label: "Em análise", className: "badge--tecnico" };
+  if (itens.some((i) => i.status === "aguardando_pagamento")) return { label: "Aguardando pagamento", className: "badge--info" };
   if (itens.some((i) => i.status === "aprovado")) return { label: "Aprovado", className: "badge--simples" };
   if (itens.length > 0 && itens.every((i) => i.status === "recusado")) return { label: "Recusado", className: "badge--bloqueado" };
   return { label: "Sem alterações", className: "badge--neutro" };
@@ -131,7 +134,7 @@ export function PersonalizacoesPage() {
   } = useApp();
   const toast = useToast();
 
-  const [construtorasFechadas, setConstrutorasFechadas] = useState<Record<string, boolean>>({});
+  const [construtorasAbertas, setConstrutorasAbertas] = useState<Record<string, boolean>>({});
   const [empreendimentosFechados, setEmpreendimentosFechados] = useState<Record<string, boolean>>({});
   const [unidadesAbertas, setUnidadesAbertas] = useState<Record<string, boolean>>({});
   const [ambientesAbertos, setAmbientesAbertos] = useState<Record<string, boolean>>({});
@@ -273,8 +276,11 @@ export function PersonalizacoesPage() {
       {arvore.length === 0 && <div className="card text-soft" style={{ fontSize: 14 }}>Nenhuma unidade vinculada.</div>}
 
       {arvore.map((c) => {
-        const cAberta = !construtorasFechadas[c.id];
-        const toggleC = () => alternar(setConstrutorasFechadas, c.id);
+        // Colapsada por padrão — cliente expande a construtora que quer
+        // mexer. Sem UI de grupo (multiConstrutora falso), não há como
+        // expandir, então nesse caso sempre mostra aberto.
+        const cAberta = multiConstrutora ? !!construtorasAbertas[c.id] : true;
+        const toggleC = () => alternar(setConstrutorasAbertas, c.id);
         return (
           <div key={c.id}>
             {multiConstrutora && (

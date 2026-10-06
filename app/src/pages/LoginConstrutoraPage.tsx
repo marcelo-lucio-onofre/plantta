@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BrandMark } from "../components/BrandMark";
 import { useApp } from "../state/AppContext";
+import { compose, email as emailValidator, required } from "../domain/validation";
 
 export function LoginConstrutoraPage() {
   const { vinculos, loginConstrutora } = useApp();
@@ -9,15 +10,24 @@ export function LoginConstrutoraPage() {
 
   const construtoras = [...new Map(vinculos.map((v) => [v.construtoraId, v.construtoraNome])).entries()];
   const [construtoraId, setConstrutoraId] = useState(construtoras[0]?.[0] ?? "");
+  const [emailCorp, setEmailCorp] = useState("");
+  const [senha, setSenha] = useState("");
+  const [erroEmail, setErroEmail] = useState<string>();
+  const [erroSenha, setErroSenha] = useState<string>();
 
   function handleEnter() {
     if (!construtoraId) return;
+    const erroEm = compose(required("Informe o e-mail corporativo"), emailValidator())(emailCorp);
+    const erroSe = required("Informe a senha")(senha);
+    setErroEmail(erroEm);
+    setErroSenha(erroSe);
+    if (erroEm || erroSe) return;
     loginConstrutora(construtoraId);
     navigate("/painel");
   }
 
   return (
-    <div style={{ minHeight: "70vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "48px 16px", background: "var(--navy)" }}>
+    <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", padding: "48px 16px", background: "var(--navy)" }}>
       <div style={{ width: "100%", maxWidth: 380, background: "#fff", borderRadius: 16, padding: "32px 28px", boxShadow: "0 20px 50px -30px rgba(0,0,0,.5)" }}>
         <div className="row gap-sm" style={{ marginBottom: 22 }}>
           <BrandMark light={false} />
@@ -53,11 +63,27 @@ export function LoginConstrutoraPage() {
           </div>
           <div>
             <label className="label">E-mail corporativo</label>
-            <input className="input" placeholder="voce@construtora.com.br" />
+            <input
+              className={erroEmail ? "input input--invalid" : "input"}
+              type="email"
+              value={emailCorp}
+              placeholder="voce@construtora.com.br"
+              onChange={(e) => { setEmailCorp(e.target.value); setErroEmail(undefined); }}
+              onBlur={() => setErroEmail(compose(required("Informe o e-mail corporativo"), emailValidator())(emailCorp))}
+            />
+            {erroEmail && <div style={{ fontSize: 11.5, color: "var(--red-ink)", marginTop: 4 }}>{erroEmail}</div>}
           </div>
           <div>
             <label className="label">Senha</label>
-            <input className="input" type="password" placeholder="••••••••" />
+            <input
+              className={erroSenha ? "input input--invalid" : "input"}
+              type="password"
+              value={senha}
+              placeholder="••••••••"
+              onChange={(e) => { setSenha(e.target.value); setErroSenha(undefined); }}
+              onBlur={() => setErroSenha(required("Informe a senha")(senha))}
+            />
+            {erroSenha && <div style={{ fontSize: 11.5, color: "var(--red-ink)", marginTop: 4 }}>{erroSenha}</div>}
           </div>
         </div>
 

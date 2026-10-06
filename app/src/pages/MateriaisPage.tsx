@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2, X } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { DataTable } from "../components/DataTable";
 import { FilterBar, textMatch } from "../components/FilterBar";
 import { Modal } from "../components/Modal";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { FormField } from "../components/FormField";
+import { ImageThumb } from "../components/ImageThumb";
 import { useToast } from "../components/Toast";
 import { useApp } from "../state/AppContext";
+import { useLoading } from "../state/LoadingContext";
 import { materiaisEmUsoIds } from "../domain/usage";
 import { required } from "../domain/validation";
 import type { MaterialCatalogItem } from "../domain/types";
@@ -20,11 +22,13 @@ interface Draft {
   fornecedorId: string;
   modelo: string;
   sku: string;
+  imagemUrl: string | null;
   errors: Partial<Record<"categoriaId" | "marcaId" | "fornecedorId" | "modelo", string>>;
 }
 
 export function MateriaisPage() {
   const { construtoraLogadaId, catalogo, catalogoMateriais, catalogoCategorias, catalogoMarcas, catalogoFornecedores, criarMaterial, atualizarMaterial, removerMaterial } = useApp();
+  const { runComLoading } = useLoading();
   const toast = useToast();
   const construtoraId = construtoraLogadaId ?? "";
   const materiais = catalogoMateriais.list(construtoraId);
@@ -54,10 +58,18 @@ export function MateriaisPage() {
   );
 
   function abrirCriar() {
-    setModal({ categoriaId: categorias[0]?.id ?? "", marcaId: marcas[0]?.id ?? "", fornecedorId: fornecedores[0]?.id ?? "", modelo: "", sku: "", errors: {} });
+    setModal({ categoriaId: categorias[0]?.id ?? "", marcaId: marcas[0]?.id ?? "", fornecedorId: fornecedores[0]?.id ?? "", modelo: "", sku: "", imagemUrl: null, errors: {} });
   }
   function abrirEditar(m: MaterialCatalogItem) {
-    setModal({ id: m.id, categoriaId: m.categoriaId, marcaId: m.marcaId, fornecedorId: m.fornecedorId, modelo: m.modelo, sku: m.sku, errors: {} });
+    setModal({ id: m.id, categoriaId: m.categoriaId, marcaId: m.marcaId, fornecedorId: m.fornecedorId, modelo: m.modelo, sku: m.sku, imagemUrl: m.imagemUrl, errors: {} });
+  }
+
+  function handleImagem(fileList: FileList | null) {
+    const file = fileList?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setModal((m) => (m ? { ...m, imagemUrl: reader.result as string } : m));
+    reader.readAsDataURL(file);
   }
 
   function validar(d: Draft): Draft["errors"] {
@@ -76,22 +88,25 @@ export function MateriaisPage() {
       setModal({ ...modal, errors });
       return;
     }
-    const payload = { categoriaId: modal.categoriaId, marcaId: modal.marcaId, fornecedorId: modal.fornecedorId, modelo: modal.modelo.trim(), sku: modal.sku.trim() };
-    if (modal.id) {
-      atualizarMaterial(modal.id, payload);
-      toast.success("Material atualizado.");
-    } else {
-      criarMaterial({ construtoraId, ...payload, imagemUrl: null });
-      toast.success("Material criado.");
-    }
-    setModal(null);
+    const payload = { categoriaId: modal.categoriaId, marcaId: modal.marcaId, fornecedorId: modal.fornecedorId, modelo: modal.modelo.trim(), sku: modal.sku.trim(), imagemUrl: modal.imagemUrl };
+    const editando = Boolean(modal.id);
+    const id = modal.id;
+    runComLoading(() => {
+      if (editando && id) atualizarMaterial(id, payload);
+      else criarMaterial({ construtoraId, ...payload });
+    }, editando ? "Salvando material..." : "Criando material...").then(() => {
+      toast.success(editando ? "Material atualizado." : "Material criado.");
+      setModal(null);
+    });
   }
 
   function confirmarExclusao() {
     if (!excluindo) return;
-    removerMaterial(excluindo.id);
-    toast.success("Material excluído.");
-    setExcluindo(null);
+    const alvo = excluindo;
+    runComLoading(() => removerMaterial(alvo.id), "Excluindo material...").then(() => {
+      toast.success("Material excluído.");
+      setExcluindo(null);
+    });
   }
 
   return (
@@ -140,11 +155,21 @@ export function MateriaisPage() {
       {!semPreRequisito && (
         <DataTable
           columns={[
-            { key: "categoria", header: "Categoria", render: (m) => categoriaNome(m.categoriaId) },
-            { key: "marca", header: "Marca", render: (m) => marcaNome(m.marcaId) },
-            { key: "fornecedor", header: "Fornecedor", render: (m) => fornecedorNome(m.fornecedorId) },
-            { key: "modelo", header: "Modelo", render: (m) => m.modelo },
-            { key: "sku", header: "SKU", mono: true, render: (m) => m.sku || "—" },
+            { key: "categoria", header: "Categoria", sortValue: (m) => categoriaNome(m.categoriaId), render: (m) => categoriaNome(m.categoriaId) },
+            { key: "marca", header: "Marca", sortValue: (m) => marcaNome(m.marcaId), render: (m) => marcaNome(m.marcaId) },
+            { key: "fornecedor", header: "Fornecedor", sortValue: (m) => fornecedorNome(m.fornecedorId), render: (m) => fornecedorNome(m.fornecedorId) },
+            {
+              key: "modelo",
+              header: "Modelo",
+              sortValue: (m) => m.modelo,
+              render: (m) => (
+                <div className="row gap-sm" style={{ alignItems: "center" }}>
+                  <ImageThumb url={m.imagemUrl} alt={m.modelo} size={36} />
+                  <span>{m.modelo}</span>
+                </div>
+              ),
+            },
+            { key: "sku", header: "SKU", idColumn: true, sortValue: (m) => m.sku, render: (m) => m.sku || "—" },
             {
               key: "uso",
               header: "Uso",
@@ -229,6 +254,17 @@ export function MateriaisPage() {
             </FormField>
             <FormField label="SKU" htmlFor="mat-sku">
               <input id="mat-sku" className="input" value={modal.sku} placeholder="PTB-PREM-8080" onChange={(e) => setModal({ ...modal, sku: e.target.value })} />
+            </FormField>
+            <FormField label="Imagem" htmlFor="mat-imagem" hint="Facilita identificar o material na hora de cadastrar itens e pra quem for personalizar.">
+              <div className="row gap-sm" style={{ alignItems: "center" }}>
+                <ImageThumb url={modal.imagemUrl} alt={modal.modelo || "Material"} size={48} />
+                <input id="mat-imagem" type="file" accept="image/*" style={{ fontSize: 12, flex: 1, minWidth: 0 }} onChange={(e) => handleImagem(e.target.files)} />
+                {modal.imagemUrl && (
+                  <button type="button" className="table-icon-btn" title="Remover imagem" aria-label="Remover imagem" onClick={() => setModal({ ...modal, imagemUrl: null })}>
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
             </FormField>
             <div className="row gap-sm" style={{ justifyContent: "flex-end", marginTop: 10 }}>
               <button type="button" className="btn btn--sm" onClick={() => setModal(null)}>Cancelar</button>

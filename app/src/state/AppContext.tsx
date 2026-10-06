@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, type ReactNode } from "react";
 import { repositories } from "../data/repositories/inMemory";
 import { planttaBrand } from "../data/mockData";
+import { totalUnidadesTorres } from "../domain/calculations";
 import type { NovaSolicitacaoInput } from "../data/repositories/types";
 import type {
   AllowanceGroup,
@@ -18,6 +19,8 @@ import type {
   Role,
   Solicitacao,
   SolicitacaoMaterialProprio,
+  StatusSolicitacao,
+  TipoAmbiente,
   UnidadeAssociada,
   Vinculo,
 } from "../domain/types";
@@ -98,6 +101,10 @@ type Action =
   | { type: "REVOGAR_NAO_PERSONALIZACAO"; vinculoId: string }
   | { type: "APROVAR_SOLICITACAO"; id: string }
   | { type: "RECUSAR_SOLICITACAO"; id: string }
+  | { type: "MOVER_STATUS_SOLICITACAO"; id: string; status: StatusSolicitacao }
+  | { type: "REGISTRAR_CUSTOS_EXTRAS"; id: string; valorMaterialEscolhido: number; custosExtras: Solicitacao["custosExtras"] }
+  | { type: "VINCULO_CRIADO" }
+  | { type: "REFRESH_VINCULOS" }
   | { type: "REFRESH_SOLICITACOES" }
   | { type: "REFRESH_CADASTROS" }
   | { type: "DADOS_ATUALIZADOS" };
@@ -166,13 +173,27 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, naoPersonalizacao };
     }
     case "APROVAR_SOLICITACAO": {
-      repositories.solicitacoes.updateStatus(action.id, "aprovado");
+      // Aprovação técnica não fecha mais direto em "aprovado" — fica
+      // "aguardando pagamento" até o analista confirmar o pagamento (kanban
+      // do Painel), só aí vira "aprovado" de fato.
+      repositories.solicitacoes.updateStatus(action.id, "aguardando_pagamento");
       return { ...state, solicitacoes: [...repositories.solicitacoes.list()] };
     }
     case "RECUSAR_SOLICITACAO": {
       repositories.solicitacoes.updateStatus(action.id, "recusado");
       return { ...state, solicitacoes: [...repositories.solicitacoes.list()] };
     }
+    case "MOVER_STATUS_SOLICITACAO": {
+      repositories.solicitacoes.updateStatus(action.id, action.status);
+      return { ...state, solicitacoes: [...repositories.solicitacoes.list()] };
+    }
+    case "REGISTRAR_CUSTOS_EXTRAS": {
+      repositories.solicitacoes.registrarCustosExtras(action.id, action.valorMaterialEscolhido, action.custosExtras);
+      return { ...state, solicitacoes: [...repositories.solicitacoes.list()] };
+    }
+    case "VINCULO_CRIADO":
+    case "REFRESH_VINCULOS":
+      return { ...state, vinculos: repositories.vinculos.listForCliente() };
     case "REFRESH_SOLICITACOES":
       return { ...state, solicitacoes: [...repositories.solicitacoes.list()] };
     case "REFRESH_CADASTROS":
@@ -204,6 +225,20 @@ interface AppContextValue extends AppState {
   revogarNaoPersonalizacao: (vinculoId: string) => void;
   aprovarSolicitacao: (id: string) => void;
   recusarSolicitacao: (id: string) => void;
+  moverStatusSolicitacao: (id: string, status: StatusSolicitacao) => void;
+  registrarCustosExtras: (id: string, valorMaterialEscolhido: number, custosExtras: Solicitacao["custosExtras"]) => void;
+  /** Cria (se ainda não existir) o vínculo que o wizard de personalização
+   * precisa pra uma unidade vendida — ponte entre UnidadeAssociada (Vendas)
+   * e Vinculo (todo o resto do fluxo de personalização/portal do cliente).
+   * Devolve undefined se a unidade ainda não tem planta (sem planta não há
+   * catálogo pra personalizar). */
+  garantirVinculoDaUnidade: (unidade: UnidadeAssociada) => Vinculo | undefined;
+  /** Assina (`assinar: true`) ou reabre (`assinar: false`) a declaração de
+   * "não desejo alterar" desta unidade — ver `Vinculo.semAlteracaoAssinadaEm`. */
+  registrarSemAlteracao: (vinculoId: string, assinar: boolean, assinadoPor?: string) => void;
+  /** Construtora confirma que recebeu o pagamento das personalizações
+   * aprovadas da unidade — libera o termo/memorial pro cliente. */
+  confirmarPagamento: (vinculoId: string) => void;
   criarSolicitacao: (input: NovaSolicitacaoInput) => Solicitacao;
   cadastrarEmpreendimento: (input: CadastroEmpreendimentoInput) => EmpreendimentoCadastrado;
   atualizarArquivosCadastro: (id: string, arquivos: CadastroEmpreendimentoInput["arquivos"]) => void;
@@ -219,6 +254,9 @@ interface AppContextValue extends AppState {
   criarMarca: (input: Omit<Marca, "id">) => Marca;
   atualizarMarca: (id: string, patch: Partial<Omit<Marca, "id" | "construtoraId">>) => void;
   removerMarca: (id: string) => void;
+  criarAmbienteTipo: (input: Omit<TipoAmbiente, "id">) => TipoAmbiente;
+  atualizarAmbienteTipo: (id: string, patch: Partial<Omit<TipoAmbiente, "id" | "construtoraId">>) => void;
+  removerAmbienteTipo: (id: string) => void;
   criarFornecedor: (input: Omit<Fornecedor, "id">) => Fornecedor;
   atualizarFornecedor: (id: string, patch: Partial<Omit<Fornecedor, "id" | "construtoraId">>) => void;
   removerFornecedor: (id: string) => void;
@@ -230,6 +268,7 @@ interface AppContextValue extends AppState {
   catalogoMateriais: typeof repositories.materiais;
   catalogoCategorias: typeof repositories.categorias;
   catalogoMarcas: typeof repositories.marcas;
+  catalogoAmbientes: typeof repositories.ambientes;
   unidadesRepo: typeof repositories.unidades;
   pessoasRepo: typeof repositories.pessoas;
   catalogoFornecedores: typeof repositories.fornecedores;
@@ -291,6 +330,65 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const revogarNaoPersonalizacao = useCallback((vinculoId: string) => dispatch({ type: "REVOGAR_NAO_PERSONALIZACAO", vinculoId }), []);
   const aprovarSolicitacao = useCallback((id: string) => dispatch({ type: "APROVAR_SOLICITACAO", id }), []);
   const recusarSolicitacao = useCallback((id: string) => dispatch({ type: "RECUSAR_SOLICITACAO", id }), []);
+  const moverStatusSolicitacao = useCallback((id: string, status: StatusSolicitacao) => dispatch({ type: "MOVER_STATUS_SOLICITACAO", id, status }), []);
+  const registrarCustosExtras = useCallback(
+    (id: string, valorMaterialEscolhido: number, custosExtras: Solicitacao["custosExtras"]) =>
+      dispatch({ type: "REGISTRAR_CUSTOS_EXTRAS", id, valorMaterialEscolhido, custosExtras }),
+    [],
+  );
+  const garantirVinculoDaUnidade = useCallback((unidade: UnidadeAssociada): Vinculo | undefined => {
+    if (!unidade.plantaId) return undefined;
+    const id = `vinc-${unidade.empreendimentoId}-${unidade.numero}`;
+    const existente = repositories.vinculos.getById(id);
+    if (existente) return existente;
+
+    const cadastro = repositories.cadastros.list().find((c) => c.id === unidade.empreendimentoId);
+    const planta = repositories.catalogo.listPlantas(unidade.empreendimentoId).find((p) => p.id === unidade.plantaId);
+    if (!cadastro || !planta) return undefined;
+    const torre = cadastro.torres.find((t) => t.id === unidade.torreId);
+
+    const vinculo: Vinculo = {
+      id,
+      construtoraId: cadastro.construtoraId,
+      construtoraNome: cadastro.construtora,
+      empreendimentoId: cadastro.id,
+      empreendimentoNome: cadastro.nome,
+      plantaId: planta.id,
+      plantaNome: planta.nome,
+      unidadeLabel: unidade.numero,
+      torre: torre?.nome ?? unidade.torreId,
+      brand: repositories.brand.getBrand(cadastro.construtoraId),
+    };
+    repositories.vinculos.upsert(vinculo);
+    repositories.catalogo.registrarEmpreendimentoPorVinculo(id, {
+      nome: cadastro.nome,
+      construtora: cadastro.construtora,
+      unidade: unidade.numero,
+      torre: torre?.nome ?? unidade.torreId,
+      comprador: unidade.clienteNome || "Cliente",
+      cpf: "",
+      totalUnidades: totalUnidadesTorres(cadastro.torres),
+      valorImovel: unidade.valor ?? 0,
+    });
+    dispatch({ type: "VINCULO_CRIADO" });
+    return vinculo;
+  }, []);
+  const registrarSemAlteracao = useCallback((vinculoId: string, assinar: boolean, assinadoPor?: string) => {
+    const vinculo = repositories.vinculos.getById(vinculoId);
+    if (!vinculo) return;
+    repositories.vinculos.upsert({
+      ...vinculo,
+      semAlteracaoAssinadaEm: assinar ? new Date().toISOString() : null,
+      semAlteracaoAssinadaPor: assinar ? (assinadoPor ?? null) : null,
+    });
+    dispatch({ type: "REFRESH_VINCULOS" });
+  }, []);
+  const confirmarPagamento = useCallback((vinculoId: string) => {
+    const vinculo = repositories.vinculos.getById(vinculoId);
+    if (!vinculo) return;
+    repositories.vinculos.upsert({ ...vinculo, pagamentoConfirmadoEm: new Date().toISOString() });
+    dispatch({ type: "REFRESH_VINCULOS" });
+  }, []);
   const criarSolicitacao = useCallback((input: NovaSolicitacaoInput) => {
     const created = repositories.solicitacoes.create(input);
     dispatch({ type: "REFRESH_SOLICITACOES" });
@@ -358,6 +456,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     repositories.marcas.remove(id);
     dispatch({ type: "DADOS_ATUALIZADOS" });
   }, []);
+  const criarAmbienteTipo = useCallback((input: Omit<TipoAmbiente, "id">) => {
+    const created = repositories.ambientes.create(input);
+    dispatch({ type: "DADOS_ATUALIZADOS" });
+    return created;
+  }, []);
+  const atualizarAmbienteTipo = useCallback((id: string, patch: Partial<Omit<TipoAmbiente, "id" | "construtoraId">>) => {
+    repositories.ambientes.update(id, patch);
+    dispatch({ type: "DADOS_ATUALIZADOS" });
+  }, []);
+  const removerAmbienteTipo = useCallback((id: string) => {
+    repositories.ambientes.remove(id);
+    dispatch({ type: "DADOS_ATUALIZADOS" });
+  }, []);
   const criarFornecedor = useCallback((input: Omit<Fornecedor, "id">) => {
     const created = repositories.fornecedores.create(input);
     dispatch({ type: "DADOS_ATUALIZADOS" });
@@ -420,6 +531,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       revogarNaoPersonalizacao,
       aprovarSolicitacao,
       recusarSolicitacao,
+      moverStatusSolicitacao,
+      registrarCustosExtras,
+      garantirVinculoDaUnidade,
+      registrarSemAlteracao,
+      confirmarPagamento,
       criarSolicitacao,
       cadastrarEmpreendimento,
       atualizarArquivosCadastro,
@@ -435,6 +551,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       criarMarca,
       atualizarMarca,
       removerMarca,
+      criarAmbienteTipo,
+      atualizarAmbienteTipo,
+      removerAmbienteTipo,
       criarFornecedor,
       atualizarFornecedor,
       removerFornecedor,
@@ -446,6 +565,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       catalogoMateriais: repositories.materiais,
       catalogoCategorias: repositories.categorias,
       catalogoMarcas: repositories.marcas,
+      catalogoAmbientes: repositories.ambientes,
       catalogoFornecedores: repositories.fornecedores,
       unidadesRepo: repositories.unidades,
       pessoasRepo: repositories.pessoas,
@@ -472,6 +592,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       revogarNaoPersonalizacao,
       aprovarSolicitacao,
       recusarSolicitacao,
+      moverStatusSolicitacao,
+      registrarCustosExtras,
+      garantirVinculoDaUnidade,
+      registrarSemAlteracao,
+      confirmarPagamento,
       criarSolicitacao,
       cadastrarEmpreendimento,
       atualizarArquivosCadastro,
@@ -487,6 +612,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       criarMarca,
       atualizarMarca,
       removerMarca,
+      criarAmbienteTipo,
+      atualizarAmbienteTipo,
+      removerAmbienteTipo,
       criarFornecedor,
       atualizarFornecedor,
       removerFornecedor,

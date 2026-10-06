@@ -20,6 +20,7 @@ const operacao: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: BarChart3 },
 ];
 const configuracao: NavItem[] = [
+  { to: "/cadastro", label: "Empreendimentos", icon: Building2 },
   {
     label: "Cadastros auxiliares",
     icon: Package,
@@ -27,11 +28,18 @@ const configuracao: NavItem[] = [
       { to: "/catalogo/materiais", label: "Materiais" },
       { to: "/catalogo/categorias", label: "Categorias" },
       { to: "/catalogo/marcas", label: "Marcas" },
+      { to: "/catalogo/ambientes", label: "Ambientes" },
       { to: "/catalogo/fornecedores", label: "Fornecedores" },
     ],
   },
-  { to: "/cadastro", label: "Empreendimentos", icon: Building2 },
-  { to: "/pessoas", label: "Pessoas", icon: Users },
+  {
+    label: "Pessoas",
+    icon: Users,
+    children: [
+      { to: "/pessoas/funcionarios", label: "Funcionários" },
+      { to: "/pessoas/clientes", label: "Clientes" },
+    ],
+  },
   { to: "/contatos", label: "Contatos", icon: Contact },
   { to: "/marca", label: "Marca", icon: Palette },
 ];

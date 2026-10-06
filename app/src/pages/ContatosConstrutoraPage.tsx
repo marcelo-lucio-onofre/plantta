@@ -2,8 +2,12 @@ import { useState } from "react";
 import { PageHeader } from "../components/PageHeader";
 import { FormField } from "../components/FormField";
 import { useToast } from "../components/Toast";
+import { MaskedInput } from "../components/MaskedInput";
 import { useApp } from "../state/AppContext";
+import { useLoading } from "../state/LoadingContext";
 import { cnpjCpf, email as emailValidator, required, uf as ufValidator } from "../domain/validation";
+import { maskCEP, maskCNPJ, maskTelefone } from "../domain/mask";
+import { mockEnderecoPorCep } from "../domain/cepMock";
 import type { ContatoConstrutora } from "../domain/types";
 
 type Errors = Partial<Record<keyof ContatoConstrutora, string>>;
@@ -21,6 +25,7 @@ const VALIDATORS: Partial<Record<keyof ContatoConstrutora, (v: string) => string
 
 export function ContatosConstrutoraPage() {
   const { vinculos, construtoraLogadaId, contatoConstrutoraRepo, saveContatoConstrutora } = useApp();
+  const { runComLoading } = useLoading();
   const toast = useToast();
   const construtoraId = construtoraLogadaId ?? "";
   const construtoraNome = vinculos.find((v) => v.construtoraId === construtoraId)?.construtoraNome ?? "Construtora";
@@ -40,6 +45,18 @@ export function ContatosConstrutoraPage() {
     setErrors((e) => ({ ...e, [key]: validator(draft[key]) }));
   }
 
+  function handleCepBlur() {
+    if (draft.cep.replace(/\D/g, "").length !== 8) return;
+    const mock = mockEnderecoPorCep(draft.cep);
+    if (mock) {
+      runComLoading(() => {
+        setField("endereco", mock.rua);
+        setField("cidade", mock.cidade);
+        setField("uf", mock.uf);
+      }, "Buscando endereço pelo CEP...");
+    }
+  }
+
   function validarTudo(): boolean {
     const next: Errors = {};
     for (const key of Object.keys(VALIDATORS) as (keyof ContatoConstrutora)[]) {
@@ -55,8 +72,9 @@ export function ContatosConstrutoraPage() {
   function salvar(e: React.FormEvent) {
     e.preventDefault();
     if (!construtoraId || !validarTudo()) return;
-    saveContatoConstrutora(construtoraId, draft);
-    toast.success("Dados da construtora atualizados.");
+    runComLoading(() => saveContatoConstrutora(construtoraId, draft), "Salvando dados da construtora...").then(() => {
+      toast.success("Dados da construtora atualizados.");
+    });
   }
 
   return (
@@ -85,12 +103,14 @@ export function ContatosConstrutoraPage() {
               <input id="contato-nomeFantasia" className="input" value={draft.nomeFantasia} placeholder="Prado Engenharia" onChange={(e) => setField("nomeFantasia", e.target.value)} />
             </FormField>
             <FormField label="CNPJ" htmlFor="contato-cnpj" error={errors.cnpj}>
-              <input
+              <MaskedInput
                 id="contato-cnpj"
                 className={errors.cnpj ? "input input--invalid" : "input"}
+                mask={maskCNPJ}
+                maxDigits={14}
                 value={draft.cnpj}
                 placeholder="00.000.000/0001-00"
-                onChange={(e) => setField("cnpj", e.target.value)}
+                onChange={(v) => setField("cnpj", v)}
                 onBlur={() => blurField("cnpj")}
               />
             </FormField>
@@ -104,7 +124,7 @@ export function ContatosConstrutoraPage() {
           <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-soft)", marginBottom: 12 }}>Contato</div>
           <div className="grid grid-2" style={{ gap: 12 }}>
             <FormField label="Telefone" htmlFor="contato-telefone">
-              <input id="contato-telefone" className="input" value={draft.telefone} placeholder="(11) 3000-0000" onChange={(e) => setField("telefone", e.target.value)} />
+              <MaskedInput id="contato-telefone" mask={maskTelefone} maxDigits={11} value={draft.telefone} placeholder="(11) 3000-0000" onChange={(v) => setField("telefone", v)} />
             </FormField>
             <FormField label="E-mail" htmlFor="contato-email" error={errors.email}>
               <input
@@ -127,12 +147,12 @@ export function ContatosConstrutoraPage() {
           <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-soft)", marginBottom: 12 }}>Endereço</div>
           <div style={{ marginBottom: 12, maxWidth: 200 }}>
             <FormField label="CEP" htmlFor="contato-cep">
-              <input id="contato-cep" className="input" value={draft.cep} placeholder="00000-000" onChange={(e) => setField("cep", e.target.value)} />
+              <MaskedInput id="contato-cep" mask={maskCEP} maxDigits={8} value={draft.cep} placeholder="00000-000" onChange={(v) => setField("cep", v)} onBlur={handleCepBlur} />
             </FormField>
           </div>
           <div className="grid grid-2" style={{ gap: 12 }}>
             <div style={{ gridColumn: "1 / -1" }}>
-              <FormField label="Endereço" htmlFor="contato-endereco">
+              <FormField label="Endereço" htmlFor="contato-endereco" hint="Rua vem do CEP — complete com o número.">
                 <input id="contato-endereco" className="input" value={draft.endereco} placeholder="Rua, número" onChange={(e) => setField("endereco", e.target.value)} />
               </FormField>
             </div>

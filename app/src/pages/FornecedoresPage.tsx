@@ -7,11 +7,13 @@ import { FilterBar, textMatch } from "../components/FilterBar";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { useToast } from "../components/Toast";
 import { useApp } from "../state/AppContext";
+import { useLoading } from "../state/LoadingContext";
 import { fornecedorEmUso } from "../domain/usage";
 import type { Fornecedor } from "../domain/types";
 
 export function FornecedoresPage() {
   const { construtoraLogadaId, catalogoFornecedores, catalogoMateriais, removerFornecedor } = useApp();
+  const { runComLoading } = useLoading();
   const navigate = useNavigate();
   const toast = useToast();
   const construtoraId = construtoraLogadaId ?? "";
@@ -25,9 +27,11 @@ export function FornecedoresPage() {
 
   function confirmarExclusao() {
     if (!excluindo) return;
-    removerFornecedor(excluindo.id);
-    toast.success("Fornecedor excluído.");
-    setExcluindo(null);
+    const alvo = excluindo;
+    runComLoading(() => removerFornecedor(alvo.id), "Excluindo fornecedor...").then(() => {
+      toast.success("Fornecedor excluído.");
+      setExcluindo(null);
+    });
   }
 
   return (
@@ -55,6 +59,7 @@ export function FornecedoresPage() {
           {
             key: "razaoSocial",
             header: "Razão social",
+            sortValue: (f) => f.razaoSocial,
             render: (f) => (
               <div>
                 <div style={{ fontWeight: 600 }}>{f.razaoSocial || "—"}</div>
@@ -62,9 +67,9 @@ export function FornecedoresPage() {
               </div>
             ),
           },
-          { key: "cidade", header: "Cidade/UF", render: (f) => (f.cidade ? `${f.cidade}${f.uf ? "/" + f.uf : ""}` : "—") },
+          { key: "cidade", header: "Cidade/UF", sortValue: (f) => f.cidade, render: (f) => (f.cidade ? `${f.cidade}${f.uf ? "/" + f.uf : ""}` : "—") },
           { key: "telefone", header: "Telefone", mono: true, render: (f) => f.telefone || "—" },
-          { key: "email", header: "E-mail", render: (f) => f.email || "—" },
+          { key: "email", header: "E-mail", sortValue: (f) => f.email, render: (f) => f.email || "—" },
           {
             key: "uso",
             header: "Uso",

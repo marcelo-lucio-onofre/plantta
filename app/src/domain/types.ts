@@ -8,8 +8,19 @@ export type NivelAprovacao = 1 | 2 | 3;
 
 export interface Brand {
   nome: string;
+  /** Identificador na URL do login white-label (`/login/marca/:slug`) —
+   * minúsculo, sem espaço/acento. Único por construtora. */
+  slug: string;
   color: string;
   logo: string | null;
+  /** Imagem de fundo do login/portal white-label — aparece grande e
+   * translúcida atrás do formulário de login da construtora, com a marca
+   * (logo) em destaque por cima. `null` = sem imagem própria, cai no
+   * fundo padrão (--navy). */
+  background: string | null;
+  /** Ícone pequeno (favicon da aba do navegador + selo ao lado do
+   * formulário de login). Independente do logo grande do hero. */
+  favicon: string | null;
 }
 
 /** Dados institucionais e de contato da construtora — quem procurar,
@@ -53,6 +64,10 @@ export interface CustoPorUnidade {
 export interface Item {
   id: string;
   nome: string;
+  /** Categoria de material esperada pra esse item (Piso, Revestimento...)
+   * — filtra quais materiais aparecem pra anexar como opção, já que um
+   * item de piso não deveria listar louças da biblioteca de materiais. */
+  categoriaId?: string;
   nivel: NivelAprovacao;
   padrao: string;
   /** Preço base / verba inclusa — o que já está contemplado no contrato. */
@@ -77,6 +92,10 @@ export interface Item {
   /** When set, this item's cost is drawn from a shared AllowanceGroup
    * instead of judged purely against its own valorPadrao. */
   allowanceGroupId?: string;
+  /** Whether the client can submit their own material for this item, for
+   * technical/financial review — defaults to true (undefined means
+   * allowed) so existing items keep working without a migration. */
+  permiteMaterialProprio?: boolean;
   /** Alteração exige ART/RRT (Anotação/Registro de Responsabilidade
    * Técnica) do profissional responsável — independente do nível de
    * aprovação, que é sobre quem decide, não sobre exigência documental. */
@@ -103,6 +122,20 @@ export interface Categoria {
 /** Marca — mesmo raciocínio de Categoria, entidade própria em vez de
  * campo de texto solto. */
 export interface Marca {
+  id: string;
+  construtoraId: string;
+  nome: string;
+}
+
+/** Tipo de ambiente (Sala, Cozinha, Suíte...) — mesmo raciocínio de
+ * Categoria/Marca: taxonomia própria por construtora em vez de texto
+ * livre. `Ambiente` (a estrutura rica com itens/opções, por planta) só
+ * copia o `nome` daqui ao ser adicionado — não guarda um id de volta pra
+ * este cadastro, então editar aqui não reescreve ambientes já criados
+ * (diferente de Categoria/Marca, que são FK real em MaterialCatalogItem).
+ * Exclusão continua bloqueada por "em uso" mesmo assim, só pra não sumir
+ * a grafia canônica enquanto ela está ativa em alguma planta. */
+export interface TipoAmbiente {
   id: string;
   construtoraId: string;
   nome: string;
@@ -262,9 +295,23 @@ export interface Vinculo {
   unidadeLabel: string;
   torre: string;
   brand: Brand | null;
+  /** Quando setado, o cliente assinou o termo declarando que não fará
+   * nenhuma alteração/personalização nesta unidade — ver `MinhaUnidadePage`
+   * ("Não desejo alterar") e `TermoPage` (renderiza a declaração em vez do
+   * resumo de alterações quando isso está preenchido). `null`/ausente =
+   * ainda em aberto (padrão, e o estado pro qual "Reabrir" volta). */
+  semAlteracaoAssinadaEm?: string | null;
+  /** E-mail digitado pelo cliente como assinatura do termo de não alteração
+   * — mesma ideia de "digite pra assinar" do termo de alteração normal. */
+  semAlteracaoAssinadaPor?: string | null;
+  /** Quando setado, a construtora confirmou o pagamento das personalizações
+   * aprovadas desta unidade — só a partir daí o termo/memorial descritivo
+   * fica disponível pro cliente (ver `unidadeStatus.ts`). `null`/ausente =
+   * ainda aguardando (mesmo com solicitações já aprovadas). */
+  pagamentoConfirmadoEm?: string | null;
 }
 
-export type StatusSolicitacao = "pendente" | "em_analise" | "aprovado" | "recusado";
+export type StatusSolicitacao = "pendente" | "em_analise" | "aguardando_pagamento" | "aprovado" | "recusado";
 
 export type TipoEventoTimeline =
   | "criacao"
@@ -309,6 +356,15 @@ export interface Solicitacao {
   encerradoEm?: string;
   responsavel: string | null;
   timeline: TimelineEvent[];
+  /** Presente quando o cliente propôs material próprio (fora do catálogo)
+   * em vez de escolher uma opção do item — ver NovaPersonalizacaoPage
+   * "Enviar material próprio". `diferenca` fica `null` até o técnico
+   * decidir a proposta vencedora e os custos extras na Aprovação. */
+  materialProprio?: SolicitacaoMaterialProprio;
+  /** Custos extras que o técnico adiciona ao aprovar um material próprio —
+   * ver CustoExtra. Soma entra em `diferenca` junto com o valor da
+   * proposta escolhida. */
+  custosExtras?: CustoExtra[];
 }
 
 export type TipoLancamento = "credito" | "debito";
@@ -419,20 +475,26 @@ export interface Pessoa {
   canalContatoPreferencial: string;
   observacoes: string;
   arquivos: Record<CategoriaArquivoPessoa, ArquivoCadastro[]>;
+  /** Gerada uma única vez, na primeira vez que a pessoa vira Cliente —
+   * simula o e-mail de boas-vindas que os logins de cliente já referenciam.
+   * Não é regerada em edições seguintes. */
+  senhaAcesso?: string;
 }
 
 export type TipoEmpreendimento = "Residencial" | "Comercial" | "Misto" | "Loteamento";
 export type StatusComercialEmpreendimento = "Planejamento" | "Lançamento" | "Em obras" | "Entregue";
 
-/** Uma torre/bloco do empreendimento — pavimentos e unidades por pavimento
- * ficam por torre porque nem sempre são iguais entre torres do mesmo
- * empreendimento. O total de unidades é sempre derivado daqui
- * (ver domain/calculations.totalUnidadesTorres), nunca digitado à parte. */
+/** Uma torre/bloco do empreendimento — pavimentos ficam por torre porque
+ * nem sempre são iguais entre torres do mesmo empreendimento. Cada posição
+ * do array `unidadesPorPavimento` é um pavimento (índice 0 = pavimento 1),
+ * e o valor é a quantidade de unidades naquele pavimento — raramente igual
+ * em todos os pavimentos, por isso não é um número único por torre. O total
+ * de unidades é sempre derivado daqui (ver domain/calculations.totalUnidadesTorres),
+ * nunca digitado à parte. */
 export interface Torre {
   id: string;
   nome: string;
-  pavimentos: number;
-  unidadesPorPavimento: number;
+  unidadesPorPavimento: number[];
 }
 
 export interface CadastroEmpreendimentoInput {
@@ -464,6 +526,17 @@ export interface EmpreendimentoCadastrado extends CadastroEmpreendimentoInput {
 export interface MaterialPropostaFornecedor {
   fornecedor: string;
   valor: string;
+}
+
+/** Custo extra que o técnico adiciona na aprovação de um material próprio
+ * (`Solicitacao.materialProprio`) — mão de obra, material extra de
+ * instalação, frete etc. que não estava na cotação do cliente nem no
+ * orçamento do item padrão. Livre (descrição + valor), o técnico decide
+ * quantas linhas fazem sentido pra cada caso. */
+export interface CustoExtra {
+  id: string;
+  descricao: string;
+  valor: number;
 }
 
 export interface SolicitacaoMaterialProprio {

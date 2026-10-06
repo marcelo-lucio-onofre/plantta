@@ -13,10 +13,12 @@ import type {
   Pessoa,
   Planta,
   Solicitacao,
+  TipoAmbiente,
+  TipoPapel,
   Vinculo,
 } from "../domain/types";
 import { plantaKey } from "../domain/calculations";
-import { CATEGORIAS_MATERIAL, MARCAS_SUGERIDAS } from "../domain/catalogoReferencia";
+import { AMBIENTES_SUGERIDOS, CATEGORIAS_MATERIAL, MARCAS_SUGERIDAS } from "../domain/catalogoReferencia";
 
 // Plain-data deep clone (Ambiente/Item/Opcao are all JSON-safe: no
 // functions/Dates) — used so each empreendimento gets its own independent
@@ -30,8 +32,21 @@ function clonar<T>(value: T): T {
 // (branded login → branded portal). Editable on the Marca screen.
 export const initialBrand: Brand = {
   nome: "Alliance",
+  slug: "alliance",
   color: "#fd3541",
   logo: "https://alliance.com.br/wp-content/uploads/2026/01/logo-alliance-ok.png",
+  background: "https://alliance.com.br/wp-content/uploads/2025/11/Copia-de-Guarita-1.jpg",
+  favicon: "/brand/alliance-favicon.jpg",
+};
+
+// Prado's own brand — this construtora ("00001") is now Engemax.
+export const engemaxBrand: Brand = {
+  nome: "Engemax",
+  slug: "engemax",
+  color: "#35492e",
+  logo: "/brand/engemax-logo.png",
+  background: "/brand/engemax-background.jpg",
+  favicon: "/brand/engemax-logo.jpg",
 };
 
 // plantta's own brand — used everywhere the client portal is NOT
@@ -39,19 +54,34 @@ export const initialBrand: Brand = {
 // construtora back-office.
 export const planttaBrand: Brand = {
   nome: "plantta",
-  color: "#2e9e68",
+  slug: "plantta",
+  color: "#2f6bd8",
   logo: null,
+  background: null,
+  favicon: null,
+};
+
+// construtoraId → seed brand, opted into white-label. Single source used
+// both by InMemoryBrandRepository and by the dev-server OG-preview
+// middleware (vite.config.ts) — that middleware runs in Node, before any
+// browser JS, so it can only ever see this seed data, never brand edits
+// made live through MarcaPage (those stay in-memory, browser-only, same
+// as every other piece of state in this prototype).
+export const SEED_BRANDS: Record<string, Brand> = {
+  "00001": engemaxBrand,
+  "00003": initialBrand,
 };
 
 export const empreendimento: Empreendimento = {
-  nome: "Residencial Aurora",
-  construtora: "Prado Engenharia",
+  nome: "Canoa",
+  construtora: "Engemax",
   unidade: "Apto 1204",
   torre: "Torre B",
   comprador: "Marina Alves",
   cpf: "•••.•••.•••-89",
   totalUnidades: 300,
   valorImovel: 850000,
+  imagemUrl: "/empreendimentos/canoa.jpg",
 };
 
 // Second empreendimento for the same client, at a different construtora —
@@ -67,6 +97,48 @@ export const empreendimentoVistaVerde: Empreendimento = {
   cpf: "•••.•••.•••-89",
   totalUnidades: 180,
   valorImovel: 720000,
+};
+
+// Unidade nova, sem nenhuma solicitação ainda ("nenhuma personalização") —
+// pra "Minhas unidades" mostrar todo status possível na apresentação.
+export const empreendimentoVistaVerdeNova: Empreendimento = {
+  nome: "Vista Verde Residence",
+  construtora: "Horizonte Construções",
+  unidade: "Apto 1502",
+  torre: "Torre B",
+  comprador: "Marina Alves",
+  cpf: "•••.•••.•••-89",
+  totalUnidades: 180,
+  valorImovel: 650000,
+};
+
+// Unidade que o cliente já declarou "não vou alterar" — cobre o status
+// "Sem alteração" na demo.
+export const empreendimentoAuroraSemAlteracao: Empreendimento = {
+  nome: "Canoa",
+  construtora: "Engemax",
+  unidade: "Apto 305",
+  torre: "Torre A",
+  comprador: "Marina Alves",
+  cpf: "•••.•••.•••-89",
+  totalUnidades: 300,
+  valorImovel: 780000,
+  imagemUrl: "/empreendimentos/canoa.jpg",
+};
+
+// Segundo empreendimento da Engemax — cobre um cliente com dois
+// empreendimentos na mesma construtora ("Minhas personalizações" empilha
+// os dois embaixo do mesmo grupo Engemax).
+export const empreendimentoJangada: Empreendimento = {
+  nome: "Jangada",
+  construtora: "Engemax",
+  unidade: "Apto 402",
+  torre: "Única",
+  comprador: "Marina Alves",
+  cpf: "•••.•••.•••-89",
+  totalUnidades: 120,
+  valorImovel: 690000,
+  imagemUrl: "/empreendimentos/jangada.jpg",
 };
 
 // A third construtora — Alliance itself (its real brand, not a demo
@@ -106,7 +178,7 @@ export const empreendimentoAllianceBoulevard1502: Empreendimento = {
 
 export const empreendimentoAllianceJardins: Empreendimento = {
   nome: "Alliance Jardins",
-  construtora: "Alliance",
+  construtora: "Engemax",
   unidade: "Apto 302",
   torre: "Única",
   comprador: "Marina Alves",
@@ -123,14 +195,14 @@ export const vinculos: Vinculo[] = [
   {
     id: "v-aurora-1204",
     construtoraId: "00001",
-    construtoraNome: "Prado Engenharia",
+    construtoraNome: "Engemax",
     empreendimentoId: "00001",
-    empreendimentoNome: "Residencial Aurora",
+    empreendimentoNome: "Canoa",
     plantaId: "planta-a",
     plantaNome: "Planta A — 2 quartos",
     unidadeLabel: "Apto 1204",
     torre: "B",
-    brand: null,
+    brand: engemaxBrand,
   },
   {
     id: "v-vistaverde-2201",
@@ -179,6 +251,48 @@ export const vinculos: Vinculo[] = [
     unidadeLabel: "Apto 302",
     torre: "Única",
     brand: initialBrand,
+    // Já aprovado E pago — cobre "Concluído" (memorial liberado) na demo.
+    pagamentoConfirmadoEm: "2026-08-21T10:00:00-03:00",
+  },
+  {
+    id: "v-vistaverde-1502",
+    construtoraId: "00002",
+    construtoraNome: "Horizonte Construções",
+    empreendimentoId: "00002",
+    empreendimentoNome: "Vista Verde Residence",
+    plantaId: "planta-unica",
+    plantaNome: "Planta Única",
+    unidadeLabel: "Apto 1502",
+    torre: "B",
+    brand: null,
+    // Sem nenhuma solicitação ainda — cobre "Nenhuma personalização".
+  },
+  {
+    id: "v-aurora-305",
+    construtoraId: "00001",
+    construtoraNome: "Engemax",
+    empreendimentoId: "00001",
+    empreendimentoNome: "Canoa",
+    plantaId: "planta-a",
+    plantaNome: "Planta A — 2 quartos",
+    unidadeLabel: "Apto 305",
+    torre: "A",
+    brand: engemaxBrand,
+    // Cliente já declarou que não vai alterar — cobre "Sem alteração".
+    semAlteracaoAssinadaEm: "2026-09-05T14:00:00-03:00",
+    semAlteracaoAssinadaPor: "marina.alves@email.com",
+  },
+  {
+    id: "v-jangada-402",
+    construtoraId: "00001",
+    construtoraNome: "Engemax",
+    empreendimentoId: "00005",
+    empreendimentoNome: "Jangada",
+    plantaId: "planta-unica",
+    plantaNome: "Planta Única",
+    unidadeLabel: "Apto 402",
+    torre: "Única",
+    brand: engemaxBrand,
   },
 ];
 
@@ -554,6 +668,9 @@ export const categoriasIniciais: Categoria[] = CONSTRUTORA_IDS.flatMap((construt
 export const marcasIniciais: Marca[] = CONSTRUTORA_IDS.flatMap((construtoraId) =>
   MARCAS_SUGERIDAS.map((nome, i) => ({ id: `marca-${construtoraId}-${i}`, construtoraId, nome })),
 );
+export const ambientesIniciais: TipoAmbiente[] = CONSTRUTORA_IDS.flatMap((construtoraId) =>
+  AMBIENTES_SUGERIDOS.map((nome, i) => ({ id: `amb-${construtoraId}-${i}`, construtoraId, nome })),
+);
 
 function categoriaId(construtoraId: string, nome: string): string {
   return categoriasIniciais.find((c) => c.construtoraId === construtoraId && c.nome === nome)!.id;
@@ -572,6 +689,36 @@ export const fornecedoresIniciais: Fornecedor[] = [
   { id: "forn-005", construtoraId: "00003", razaoSocial: "Portobello Distribuidora SP Ltda", nomeFantasia: "Portobello Distribuidora SP", cnpjCpf: "12.345.678/0001-90", responsavel: "Renata Souza", telefone: "(11) 3345-2200", whatsapp: "(11) 98811-2200", email: "comercial@portobellosp.com.br", cep: "04571-000", endereco: "Av. Eng. Luís Carlos Berrini, 1200", cidade: "São Paulo", uf: "SP" },
   { id: "forn-006", construtoraId: "00003", razaoSocial: "Silestone Brasil Comércio Ltda", nomeFantasia: "Silestone Brasil", cnpjCpf: "56.789.012/0001-34", responsavel: "Camila Teixeira", telefone: "(11) 3777-9900", whatsapp: "(11) 98855-9900", email: "vendas@silestonebrasil.com.br", cep: "06454-000", endereco: "Al. Tocantins, 350", cidade: "Barueri", uf: "SP" },
   { id: "forn-007", construtoraId: "00002", razaoSocial: "Portobello Distribuidora SP Ltda", nomeFantasia: "Portobello Distribuidora SP", cnpjCpf: "12.345.678/0001-90", responsavel: "Renata Souza", telefone: "(11) 3345-2200", whatsapp: "(11) 98811-2200", email: "comercial@portobellosp.com.br", cep: "04571-000", endereco: "Av. Eng. Luís Carlos Berrini, 1200", cidade: "São Paulo", uf: "SP" },
+
+  // 00001 (Prado Engenharia) — mais fornecedores, cobrindo revestimento,
+  // louças, metais, pintura e planejados.
+  { id: "forn-008", construtoraId: "00001", razaoSocial: "Eliane Revestimentos Comércio Ltda", nomeFantasia: "Eliane Revestimentos", cnpjCpf: "67.890.123/0001-45", responsavel: "Fábio Cardoso", telefone: "(11) 3221-3300", whatsapp: "(11) 98866-3300", email: "comercial@elianesp.com.br", cep: "04547-000", endereco: "Av. Ibirapuera, 2500", cidade: "São Paulo", uf: "SP" },
+  { id: "forn-009", construtoraId: "00001", razaoSocial: "Roca Louças e Metais Brasil Ltda", nomeFantasia: "Roca Brasil", cnpjCpf: "78.901.234/0001-56", responsavel: "Sandra Nogueira", telefone: "(11) 3221-4400", whatsapp: "(11) 98877-4400", email: "vendas@rocabrasilsp.com.br", cep: "04578-000", endereco: "R. Verbo Divino, 1400", cidade: "São Paulo", uf: "SP" },
+  { id: "forn-010", construtoraId: "00001", razaoSocial: "Hydra Metais Comércio Ltda", nomeFantasia: "Hydra Metais", cnpjCpf: "89.012.345/0001-67", responsavel: "Rogério Batista", telefone: "(11) 3221-5500", whatsapp: "(11) 98888-5500", email: "comercial@hydrasp.com.br", cep: "04552-000", endereco: "Av. Santo Amaro, 900", cidade: "São Paulo", uf: "SP" },
+  { id: "forn-011", construtoraId: "00001", razaoSocial: "Suvinil Tintas Distribuidora Ltda", nomeFantasia: "Suvinil Tintas SP", cnpjCpf: "90.123.456/0001-78", responsavel: "Vera Lins", telefone: "(11) 3221-6600", whatsapp: "(11) 98899-6600", email: "vendas@suviniltintassp.com.br", cep: "04566-000", endereco: "Av. Chucri Zaidan, 700", cidade: "São Paulo", uf: "SP" },
+  { id: "forn-012", construtoraId: "00001", razaoSocial: "Todeschini Móveis Planejados SP Ltda", nomeFantasia: "Todeschini SP", cnpjCpf: "01.234.567/0001-89", responsavel: "Cláudio Ferraz", telefone: "(11) 3221-7700", whatsapp: "(11) 98900-7700", email: "comercial@todeschinisp.com.br", cep: "04533-000", endereco: "R. Funchal, 300", cidade: "São Paulo", uf: "SP" },
+
+  // 00002 (Horizonte Construções, Campinas) — mesma cobertura, fornecedores
+  // regionais próprios.
+  { id: "forn-013", construtoraId: "00002", razaoSocial: "Portinari Revestimentos Campinas Ltda", nomeFantasia: "Portinari Campinas", cnpjCpf: "12.345.679/0001-91", responsavel: "Adriana Melo", telefone: "(19) 3232-2200", whatsapp: "(19) 98811-2200", email: "comercial@portinaricampinas.com.br", cep: "13010-000", endereco: "Av. Norte-Sul, 1500", cidade: "Campinas", uf: "SP" },
+  { id: "forn-014", construtoraId: "00002", razaoSocial: "Deca Metais e Louças Campinas Ltda", nomeFantasia: "Deca Campinas", cnpjCpf: "23.456.780/0001-02", responsavel: "Wagner Rocha", telefone: "(19) 3232-3300", whatsapp: "(19) 98822-3300", email: "vendas@decacampinas.com.br", cep: "13025-000", endereco: "R. Barão de Jaguara, 800", cidade: "Campinas", uf: "SP" },
+  { id: "forn-015", construtoraId: "00002", razaoSocial: "Fabrimar Metais Sanitários Ltda", nomeFantasia: "Fabrimar Campinas", cnpjCpf: "34.567.891/0001-13", responsavel: "Simone Vieira", telefone: "(19) 3232-4400", whatsapp: "(19) 98833-4400", email: "comercial@fabrimarcampinas.com.br", cep: "13070-000", endereco: "Av. Aquidaban, 400", cidade: "Campinas", uf: "SP" },
+  { id: "forn-016", construtoraId: "00002", razaoSocial: "Eucatex Painéis e Madeiras Ltda", nomeFantasia: "Eucatex Campinas", cnpjCpf: "45.678.902/0001-24", responsavel: "Alexandre Duarte", telefone: "(19) 3232-5500", whatsapp: "(19) 98844-5500", email: "vendas@eucatexcampinas.com.br", cep: "13084-000", endereco: "R. Conceição, 1200", cidade: "Campinas", uf: "SP" },
+  { id: "forn-017", construtoraId: "00002", razaoSocial: "Coral Tintas Distribuidora Ltda", nomeFantasia: "Coral Tintas Campinas", cnpjCpf: "56.789.013/0001-35", responsavel: "Priscila Gomes", telefone: "(19) 3232-6600", whatsapp: "(19) 98855-6600", email: "comercial@coraltintascampinas.com.br", cep: "13091-000", endereco: "Av. José Rocha Bonfim, 600", cidade: "Campinas", uf: "SP" },
+
+  // 00003 (Alliance) — mesma cobertura, mais argamassa/rejunte e cuba.
+  { id: "forn-018", construtoraId: "00003", razaoSocial: "Incepa Revestimentos Cerâmicos Ltda", nomeFantasia: "Incepa SP", cnpjCpf: "67.890.124/0001-46", responsavel: "Otávio Ramalho", telefone: "(11) 3777-2200", whatsapp: "(11) 98811-7700", email: "comercial@incepasp.com.br", cep: "04571-100", endereco: "Av. Eng. Luís Carlos Berrini, 1500", cidade: "São Paulo", uf: "SP" },
+  { id: "forn-019", construtoraId: "00003", razaoSocial: "Celite Louças Sanitárias Ltda", nomeFantasia: "Celite SP", cnpjCpf: "78.901.235/0001-57", responsavel: "Marina Tavares", telefone: "(11) 3777-3300", whatsapp: "(11) 98822-7700", email: "vendas@celitesp.com.br", cep: "04578-100", endereco: "R. Verbo Divino, 1600", cidade: "São Paulo", uf: "SP" },
+  { id: "forn-020", construtoraId: "00003", razaoSocial: "Quartzolit Argamassas e Rejuntes Ltda", nomeFantasia: "Quartzolit SP", cnpjCpf: "89.012.346/0001-68", responsavel: "Diego Rangel", telefone: "(11) 3777-4400", whatsapp: "(11) 98833-7700", email: "comercial@quartzolitsp.com.br", cep: "04552-100", endereco: "Av. Santo Amaro, 1100", cidade: "São Paulo", uf: "SP" },
+  { id: "forn-021", construtoraId: "00003", razaoSocial: "Franke Cubas e Torneiras Ltda", nomeFantasia: "Franke SP", cnpjCpf: "90.123.457/0001-79", responsavel: "Letícia Barros", telefone: "(11) 3777-5500", whatsapp: "(11) 98844-7700", email: "vendas@frankesp.com.br", cep: "04566-100", endereco: "Av. Chucri Zaidan, 900", cidade: "São Paulo", uf: "SP" },
+  { id: "forn-022", construtoraId: "00003", razaoSocial: "Bertolini Móveis Planejados Ltda", nomeFantasia: "Bertolini SP", cnpjCpf: "01.234.568/0001-80", responsavel: "Gabriel Assunção", telefone: "(11) 3777-6600", whatsapp: "(11) 98855-7700", email: "comercial@bertolinisp.com.br", cep: "04533-100", endereco: "R. Funchal, 500", cidade: "São Paulo", uf: "SP" },
+
+  // Distribuidoras multimarcas — carregam esquadria, vidro, elétrica,
+  // iluminação, forro, eletrodoméstico, automação, ar-condicionado e
+  // fechadura, categorias que senão ficariam sem nenhum fornecedor.
+  { id: "forn-023", construtoraId: "00001", razaoSocial: "Acabamentos Zona Sul Distribuidora Ltda", nomeFantasia: "Acabamentos Zona Sul", cnpjCpf: "11.222.333/0001-91", responsavel: "Tatiane Borges", telefone: "(11) 3888-1010", whatsapp: "(11) 98911-1010", email: "comercial@acabamentoszonasul.com.br", cep: "04544-000", endereco: "Av. Roque Petroni Jr., 850", cidade: "São Paulo", uf: "SP" },
+  { id: "forn-024", construtoraId: "00002", razaoSocial: "Distribuidora de Acabamentos Campinas Ltda", nomeFantasia: "Acabamentos Campinas", cnpjCpf: "22.333.444/0001-02", responsavel: "Leandro Prado", telefone: "(19) 3232-1010", whatsapp: "(19) 98922-1010", email: "comercial@acabamentoscampinas.com.br", cep: "13073-000", endereco: "Av. Guilherme Campos, 500", cidade: "Campinas", uf: "SP" },
+  { id: "forn-025", construtoraId: "00003", razaoSocial: "Central de Acabamentos Paulista Ltda", nomeFantasia: "Central Acabamentos Paulista", cnpjCpf: "33.444.555/0001-13", responsavel: "Vinícius Godoy", telefone: "(11) 3888-2020", whatsapp: "(11) 98933-2020", email: "comercial@centralacabamentospaulista.com.br", cep: "01310-000", endereco: "Av. Paulista, 1800", cidade: "São Paulo", uf: "SP" },
 ];
 
 const ARQUIVOS_PESSOA_VAZIOS: Pessoa["arquivos"] = {
@@ -581,28 +728,388 @@ const ARQUIVOS_PESSOA_VAZIOS: Pessoa["arquivos"] = {
 // Pessoa/Papel — cadastro único pra qualquer humano com quem a construtora
 // lida (arquiteto/engenheiro/técnico/cliente...), não cadastros paralelos
 // por tipo (ver domain/types.ts Pessoa).
-export const pessoasIniciais: Pessoa[] = [
+const pessoasCuradas: Pessoa[] = [
   { id: "pessoa-001", construtoraId: "00001", papeis: ["Arquiteto", "Responsável pela construtora"], nome: "Fernanda Ribeiro", cpf: "111.222.333-44", email: "fernanda.ribeiro@arquitetura.com.br", telefone: "(11) 3222-1000", empresa: "Ribeiro Arquitetura", cargoEspecialidade: "Arquiteta responsável", conselho: "CAU", numeroRegistro: "A123456-7", ufRegistro: "SP", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "E-mail", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
-  { id: "pessoa-002", construtoraId: "00001", papeis: ["Engenheiro"], nome: "Carlos Eduardo Matos", cpf: "222.333.444-55", email: "carlos.matos@engenharia.com.br", telefone: "(11) 3222-2000", empresa: "Prado Engenharia", cargoEspecialidade: "Engenheiro civil — gerente de obra", conselho: "CREA", numeroRegistro: "5401234", ufRegistro: "SP", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "WhatsApp", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-002", construtoraId: "00001", papeis: ["Engenheiro"], nome: "Carlos Eduardo Matos", cpf: "222.333.444-55", email: "carlos.matos@engemax.com.br", telefone: "(11) 3222-2000", empresa: "Engemax", cargoEspecialidade: "Engenheiro civil — gerente de obra", conselho: "CREA", numeroRegistro: "5401234", ufRegistro: "SP", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "WhatsApp", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
   { id: "pessoa-003", construtoraId: "00003", papeis: ["Cliente"], nome: "Marina Alves", cpf: "333.444.555-66", email: "marina.alves@email.com", telefone: "(11) 98765-4321", empresa: "", cargoEspecialidade: "", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "Alameda Santos, 800, São Paulo/SP", estadoCivil: "Casada", canalContatoPreferencial: "WhatsApp", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+
+  // Prado Engenharia (00001) — clientes das solicitações já existentes
+  // (Ricardo/Camila/Bruno, ver solicitacoesIniciais) mais o time técnico.
+  { id: "pessoa-004", construtoraId: "00001", papeis: ["Cliente"], nome: "Ricardo Nogueira", cpf: "444.555.666-77", email: "ricardo.nogueira@email.com", telefone: "(11) 98111-2233", empresa: "", cargoEspecialidade: "", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "Rua Harmonia, 210, São Paulo/SP", estadoCivil: "Solteiro", canalContatoPreferencial: "WhatsApp", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-005", construtoraId: "00001", papeis: ["Cliente"], nome: "Camila Reis", cpf: "555.666.777-88", email: "camila.reis@email.com", telefone: "(11) 98222-3344", empresa: "", cargoEspecialidade: "", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "Av. Rebouças, 1450, São Paulo/SP", estadoCivil: "Casada", canalContatoPreferencial: "E-mail", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-006", construtoraId: "00001", papeis: ["Cliente"], nome: "Bruno Castro", cpf: "666.777.888-99", email: "bruno.castro@email.com", telefone: "(11) 98333-4455", empresa: "", cargoEspecialidade: "", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "Rua Cardeal Arcoverde, 900, São Paulo/SP", estadoCivil: "Solteiro", canalContatoPreferencial: "Telefone", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-007", construtoraId: "00001", papeis: ["Técnico"], nome: "José Almeida", cpf: "111.222.888-11", email: "jose.almeida@engemax.com.br", telefone: "(11) 3222-3000", empresa: "Engemax", cargoEspecialidade: "Técnico de edificações", conselho: "CREA", numeroRegistro: "5409988", ufRegistro: "SP", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "WhatsApp", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-008", construtoraId: "00001", papeis: ["Designer"], nome: "Patrícia Nunes", cpf: "222.333.999-22", email: "patricia@nunesdesign.com.br", telefone: "(11) 3555-4020", empresa: "Nunes Design de Interiores", cargoEspecialidade: "Designer de interiores", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "E-mail", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-009", construtoraId: "00001", papeis: ["Projetista"], nome: "Rafael Teixeira", cpf: "333.444.000-33", email: "rafael.teixeira@projetos.com.br", telefone: "(11) 3666-5030", empresa: "Teixeira Projetos", cargoEspecialidade: "Projetista arquitetônico", conselho: "CAU", numeroRegistro: "A234567-8", ufRegistro: "SP", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "E-mail", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-010", construtoraId: "00001", papeis: ["Consultor"], nome: "Marcos Vinícius Andrade", cpf: "444.555.111-44", email: "marcos.andrade@consultoria.com.br", telefone: "(11) 98444-5566", empresa: "Andrade Consultoria Imobiliária", cargoEspecialidade: "Consultor de viabilidade", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "WhatsApp", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-011", construtoraId: "00001", papeis: ["Responsável pela construtora"], nome: "Beatriz Prado", cpf: "555.666.222-55", email: "beatriz.prado@engemax.com.br", telefone: "(11) 3222-1010", empresa: "Engemax", cargoEspecialidade: "Sócia-diretora", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "E-mail", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+
+  // Horizonte Construções (00002) — clientes das solicitações já existentes
+  // (Fernanda/André/Juliana) mais o time técnico, em Campinas (DDD 19).
+  { id: "pessoa-012", construtoraId: "00002", papeis: ["Cliente"], nome: "Fernanda Lima", cpf: "666.777.333-66", email: "fernanda.lima@email.com", telefone: "(19) 98111-2200", empresa: "", cargoEspecialidade: "", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "Rua Barão de Jaguara, 300, Campinas/SP", estadoCivil: "Casada", canalContatoPreferencial: "WhatsApp", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-013", construtoraId: "00002", papeis: ["Cliente"], nome: "André Souza", cpf: "777.888.444-77", email: "andre.souza@email.com", telefone: "(19) 98222-3300", empresa: "", cargoEspecialidade: "", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "Av. Norte-Sul, 1200, Campinas/SP", estadoCivil: "Solteiro", canalContatoPreferencial: "E-mail", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-014", construtoraId: "00002", papeis: ["Cliente"], nome: "Juliana Rocha", cpf: "888.999.555-88", email: "juliana.rocha@email.com", telefone: "(19) 98333-4400", empresa: "", cargoEspecialidade: "", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "Rua Ferreira Penteado, 55, Campinas/SP", estadoCivil: "Divorciada", canalContatoPreferencial: "Telefone", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-015", construtoraId: "00002", papeis: ["Arquiteto"], nome: "Gustavo Freitas", cpf: "999.000.666-99", email: "gustavo.freitas@arquitetura.com.br", telefone: "(19) 3232-4040", empresa: "Freitas Arquitetura", cargoEspecialidade: "Arquiteto responsável", conselho: "CAU", numeroRegistro: "A345678-9", ufRegistro: "SP", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "E-mail", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-016", construtoraId: "00002", papeis: ["Engenheiro"], nome: "Débora Martins", cpf: "000.111.777-00", email: "debora.martins@horizonteconstrucoes.com.br", telefone: "(19) 3232-5050", empresa: "Horizonte Construções", cargoEspecialidade: "Engenheira civil — gerente de obra", conselho: "CREA", numeroRegistro: "5412345", ufRegistro: "SP", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "WhatsApp", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-017", construtoraId: "00002", papeis: ["Técnico"], nome: "Paulo Henrique Costa", cpf: "111.222.888-12", email: "paulo.costa@horizonteconstrucoes.com.br", telefone: "(19) 3232-6060", empresa: "Horizonte Construções", cargoEspecialidade: "Técnico de segurança do trabalho", conselho: "CREA", numeroRegistro: "5498877", ufRegistro: "SP", statusRegistro: "Inativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "E-mail", observacoes: "Desligado — mantido pra histórico de laudos assinados.", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-018", construtoraId: "00002", papeis: ["Consultor"], nome: "Renata Almeida", cpf: "222.333.999-23", email: "renata.almeida@consultoria.com.br", telefone: "(19) 98555-6070", empresa: "Almeida Consultoria", cargoEspecialidade: "Consultora comercial", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "WhatsApp", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-019", construtoraId: "00002", papeis: ["Responsável pela construtora"], nome: "Henrique Souza", cpf: "333.444.000-34", email: "henrique.souza@horizonteconstrucoes.com.br", telefone: "(19) 3232-1000", empresa: "Horizonte Construções", cargoEspecialidade: "Diretor de obras", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "E-mail", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+
+  // Alliance (00003) — clientes das solicitações já existentes (Larissa/
+  // Thiago) mais dois clientes novos (pra combo de Vendas ter opções) e
+  // o time técnico.
+  { id: "pessoa-020", construtoraId: "00003", papeis: ["Cliente"], nome: "Larissa Prado", cpf: "444.555.111-45", email: "larissa.prado@email.com", telefone: "(11) 98666-7788", empresa: "", cargoEspecialidade: "", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "Rua Oscar Freire, 500, São Paulo/SP", estadoCivil: "Casada", canalContatoPreferencial: "WhatsApp", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-021", construtoraId: "00003", papeis: ["Cliente"], nome: "Thiago Martins", cpf: "555.666.222-56", email: "thiago.martins@email.com", telefone: "(11) 98777-8899", empresa: "", cargoEspecialidade: "", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "Al. Lorena, 1100, São Paulo/SP", estadoCivil: "Solteiro", canalContatoPreferencial: "E-mail", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-022", construtoraId: "00003", papeis: ["Cliente"], nome: "Vanessa Cardoso", cpf: "666.777.333-67", email: "vanessa.cardoso@email.com", telefone: "(11) 98888-9900", empresa: "", cargoEspecialidade: "", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "Rua Haddock Lobo, 400, São Paulo/SP", estadoCivil: "Casada", canalContatoPreferencial: "WhatsApp", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-023", construtoraId: "00003", papeis: ["Cliente"], nome: "Diego Fontoura", cpf: "777.888.444-78", email: "diego.fontoura@email.com", telefone: "(11) 98999-0011", empresa: "", cargoEspecialidade: "", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "Av. Faria Lima, 2500, São Paulo/SP", estadoCivil: "Solteiro", canalContatoPreferencial: "Telefone", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-024", construtoraId: "00003", papeis: ["Arquiteto"], nome: "Isabela Cunha", cpf: "888.999.555-89", email: "isabela.cunha@arquitetura.com.br", telefone: "(11) 3455-7070", empresa: "Cunha Arquitetura", cargoEspecialidade: "Arquiteta responsável", conselho: "CAU", numeroRegistro: "A456789-0", ufRegistro: "SP", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "E-mail", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-025", construtoraId: "00003", papeis: ["Engenheiro"], nome: "Rodrigo Salles", cpf: "999.000.666-90", email: "rodrigo.salles@alliance.com.br", telefone: "(11) 3455-8080", empresa: "Alliance", cargoEspecialidade: "Engenheiro civil — gerente de obra", conselho: "CREA", numeroRegistro: "5423456", ufRegistro: "SP", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "WhatsApp", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-026", construtoraId: "00003", papeis: ["Projetista"], nome: "Ana Beatriz Rezende", cpf: "000.111.777-01", email: "ana.rezende@projetos.com.br", telefone: "(11) 98111-2299", empresa: "Rezende Projetos", cargoEspecialidade: "Projetista de interiores", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "E-mail", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
+  { id: "pessoa-027", construtoraId: "00003", papeis: ["Responsável pela construtora"], nome: "Felipe Alliance", cpf: "111.222.888-13", email: "felipe@alliance.com.br", telefone: "(11) 3455-9090", empresa: "Alliance", cargoEspecialidade: "Diretor comercial", conselho: "", numeroRegistro: "", ufRegistro: "", statusRegistro: "Ativo", endereco: "", estadoCivil: "", canalContatoPreferencial: "E-mail", observacoes: "", arquivos: ARQUIVOS_PESSOA_VAZIOS },
 ];
+
+// Pessoas geradas — mesma composição de papéis em toda construtora (mais
+// clientes, que é o que os combos de Vendas/Personalização precisam em
+// volume), só pra dar massa além dos poucos nomes curados acima.
+const NOMES_MASC = [
+  "Lucas", "Gabriel", "Matheus", "Rafael", "Gustavo", "Felipe", "Rodrigo", "Diego", "Vinícius", "Leonardo",
+  "Eduardo", "Fernando", "Marcelo", "Alexandre", "Daniel", "Pedro", "Henrique", "Otávio", "Caio", "Igor",
+  "Renato", "Sérgio", "Wagner", "Fábio", "Márcio", "Cláudio", "Rogério", "Paulo", "Roberto", "Sandro",
+];
+const NOMES_FEM = [
+  "Ana", "Beatriz", "Camila", "Juliana", "Larissa", "Mariana", "Patrícia", "Renata", "Vanessa", "Débora",
+  "Priscila", "Aline", "Bianca", "Carolina", "Daniela", "Isabela", "Letícia", "Natália", "Simone", "Tatiane",
+  "Vera", "Adriana", "Cristina", "Elaine", "Gabriela", "Luciana", "Regina", "Sandra", "Viviane", "Cecília",
+];
+const SOBRENOMES = [
+  "Silva", "Souza", "Costa", "Santos", "Oliveira", "Pereira", "Almeida", "Ribeiro", "Carvalho", "Gomes",
+  "Martins", "Rocha", "Barbosa", "Araújo", "Nascimento", "Cardoso", "Correia", "Teixeira", "Lopes", "Moreira",
+  "Cunha", "Freitas", "Machado", "Melo", "Barros", "Fonseca", "Duarte", "Vieira", "Nunes", "Andrade",
+  "Monteiro", "Pinto", "Ramos", "Batista", "Prado",
+];
+const RUAS_CLIENTE = [
+  "Rua das Palmeiras", "Av. Higienópolis", "Rua Girassol", "Rua das Acácias", "Rua Itápolis",
+  "Rua Joaquim Antunes", "Av. Angélica", "Rua Sampaio Viana", "Av. Rebouças", "Rua Harmonia",
+  "Rua dos Pinheiros", "Av. Indianópolis", "Rua Cotoxó", "Rua Purpurina", "Av. Moema",
+];
+
+interface PlanoPapel {
+  papel: TipoPapel;
+  qtd: number;
+  tipo: "cliente" | "interno" | "externo" | "outro";
+  cargoEspecialidade?: string;
+  conselho?: "CAU" | "CREA";
+  empresaSufixo?: string;
+}
+
+const PLANO_PAPEIS: PlanoPapel[] = [
+  { papel: "Cliente", qtd: 20, tipo: "cliente" },
+  { papel: "Arquiteto", qtd: 3, tipo: "externo", cargoEspecialidade: "Arquiteto(a) associado(a)", conselho: "CAU", empresaSufixo: "Arquitetura" },
+  { papel: "Engenheiro", qtd: 3, tipo: "interno", cargoEspecialidade: "Engenheiro(a) civil", conselho: "CREA" },
+  { papel: "Técnico", qtd: 3, tipo: "interno", cargoEspecialidade: "Técnico(a) de edificações", conselho: "CREA" },
+  { papel: "Designer", qtd: 3, tipo: "externo", cargoEspecialidade: "Designer de interiores", empresaSufixo: "Design de Interiores" },
+  { papel: "Projetista", qtd: 3, tipo: "externo", cargoEspecialidade: "Projetista arquitetônico(a)", empresaSufixo: "Projetos" },
+  { papel: "Consultor", qtd: 3, tipo: "externo", cargoEspecialidade: "Consultor(a) de viabilidade", empresaSufixo: "Consultoria" },
+  { papel: "Responsável pela construtora", qtd: 3, tipo: "interno", cargoEspecialidade: "Diretor(a) / sócio(a)" },
+  { papel: "Outro", qtd: 4, tipo: "outro" },
+];
+
+const CONSTRUTORAS_META: Record<string, { nome: string; ddd: string; cidade: string; dominio: string }> = {
+  "00001": { nome: "Engemax", ddd: "11", cidade: "São Paulo", dominio: "engemax.com.br" },
+  "00002": { nome: "Horizonte Construções", ddd: "19", cidade: "Campinas", dominio: "horizonteconstrucoes.com.br" },
+  "00003": { nome: "Alliance", ddd: "11", cidade: "São Paulo", dominio: "alliance.com.br" },
+};
+
+function slugify(texto: string): string {
+  return texto.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+}
+
+function cpfFake(seed: number): string {
+  const digitos = String(100000000 + seed).padStart(9, "0");
+  const dv = String(seed % 100).padStart(2, "0");
+  return `${digitos.slice(0, 3)}.${digitos.slice(3, 6)}.${digitos.slice(6, 9)}-${dv}`;
+}
+
+function gerarPessoasDaConstrutora(construtoraId: string): Pessoa[] {
+  const meta = CONSTRUTORAS_META[construtoraId];
+  const pessoas: Pessoa[] = [];
+  let seq = 0;
+  for (const plano of PLANO_PAPEIS) {
+    for (let i = 0; i < plano.qtd; i++) {
+      seq += 1;
+      const seedGlobal = seq * 37 + construtoraId.charCodeAt(4) * 101;
+      const genero = seedGlobal % 2 === 0 ? "F" : "M";
+      const poolNomes = genero === "F" ? NOMES_FEM : NOMES_MASC;
+      const primeiroNome = poolNomes[seedGlobal % poolNomes.length];
+      const sobrenome1 = SOBRENOMES[(seedGlobal * 3 + 1) % SOBRENOMES.length];
+      const sobrenome2 = SOBRENOMES[(seedGlobal * 7 + 5) % SOBRENOMES.length];
+      const nome = `${primeiroNome} ${sobrenome1} ${sobrenome2}`;
+      const slugNome = slugify(primeiroNome);
+      const slugSobrenome = slugify(sobrenome2);
+      const cpf = cpfFake(seedGlobal);
+      const telefone = `(${meta.ddd}) 9${String(8000 + seedGlobal).padStart(4, "0")}-${String(1000 + (seedGlobal % 9000)).padStart(4, "0")}`;
+      const canalContatoPreferencial = ["WhatsApp", "E-mail", "Telefone"][seedGlobal % 3];
+      const statusRegistro = seedGlobal % 11 === 0 ? "Inativo" : "Ativo";
+
+      // Sufixo com construtora+seq garante e-mail único mesmo quando dois
+      // nomes gerados colidem (pool de nomes/sobrenomes é pequeno).
+      const uniq = `${construtoraId.slice(-2)}${String(seq).padStart(3, "0")}`;
+      let empresa = "";
+      let email = `${slugNome}.${slugSobrenome}${uniq}@email.com`;
+      if (plano.tipo === "interno") {
+        empresa = meta.nome;
+        email = `${slugNome}.${slugSobrenome}${uniq}@${meta.dominio}`;
+      } else if (plano.tipo === "externo") {
+        empresa = `${sobrenome2} ${plano.empresaSufixo}`;
+        email = `${slugNome}.${slugSobrenome}${uniq}@${slugify(sobrenome2)}${slugify(plano.papel).replace(/\s+/g, "")}.com.br`;
+      }
+
+      pessoas.push({
+        id: `pessoa-${construtoraId}-${String(seq).padStart(3, "0")}`,
+        construtoraId,
+        papeis: [plano.papel],
+        nome,
+        cpf,
+        email,
+        telefone,
+        empresa,
+        cargoEspecialidade: plano.cargoEspecialidade ?? "",
+        conselho: plano.conselho ?? "",
+        numeroRegistro: plano.conselho ? `${plano.conselho === "CAU" ? "A" : "54"}${100000 + seedGlobal}` : "",
+        ufRegistro: plano.conselho ? "SP" : "",
+        statusRegistro,
+        endereco: plano.tipo === "cliente" ? `${RUAS_CLIENTE[seedGlobal % RUAS_CLIENTE.length]}, ${100 + (seedGlobal % 1900)}, ${meta.cidade}/SP` : "",
+        estadoCivil: plano.tipo === "cliente" ? ["Solteiro(a)", "Casado(a)", "Divorciado(a)", "Viúvo(a)"][seedGlobal % 4] : "",
+        canalContatoPreferencial,
+        observacoes: "",
+        arquivos: ARQUIVOS_PESSOA_VAZIOS,
+      });
+    }
+  }
+  return pessoas;
+}
+
+export const pessoasIniciais: Pessoa[] = [...pessoasCuradas, ...CONSTRUTORA_IDS.flatMap(gerarPessoasDaConstrutora)];
 
 // Biblioteca de materiais reutilizável por construtora — identidade do
 // produto (categoria/marca/modelo/SKU), sem preço/prazo: isso é resolvido
 // por item quando o material é anexado a uma opção (Opcao.preco/
 // custoConstrutora), já que preço varia por negociação e por item.
-export const materialCatalogInicial: MaterialCatalogItem[] = [
-  { id: "mc-001", construtoraId: "00001", categoriaId: categoriaId("00001", "Piso"), marcaId: marcaId("00001", "Portobello"), fornecedorId: "forn-001", modelo: "Premium 80×80", sku: "PTB-PREM-8080", imagemUrl: null },
-  { id: "mc-002", construtoraId: "00001", categoriaId: categoriaId("00001", "Bancada"), marcaId: marcaId("00001", "Dekton"), fornecedorId: "forn-002", modelo: "Sirius", sku: "DKT-SIRIUS", imagemUrl: null },
-  { id: "mc-003", construtoraId: "00001", categoriaId: categoriaId("00001", "Louças e Metais"), marcaId: marcaId("00001", "Docol"), fornecedorId: "forn-003", modelo: "Benefit Black", sku: "DOC-BEN-BLK", imagemUrl: null },
-  { id: "mc-004", construtoraId: "00001", categoriaId: categoriaId("00001", "Cuba"), marcaId: marcaId("00001", "Tramontina"), fornecedorId: "forn-004", modelo: "Morgana Dupla + Gourmet", sku: "TRAM-MORG-DP", imagemUrl: null },
-  { id: "mc-005", construtoraId: "00003", categoriaId: categoriaId("00003", "Piso"), marcaId: marcaId("00003", "Portobello"), fornecedorId: "forn-005", modelo: "Marmorizado Extra", sku: "PTB-MARM-EX", imagemUrl: null },
-  { id: "mc-006", construtoraId: "00003", categoriaId: categoriaId("00003", "Revestimento"), marcaId: marcaId("00003", "Portobello"), fornecedorId: "forn-005", modelo: "Off-White Grande Formato", sku: "PTB-OFFW-GF", imagemUrl: null },
-  { id: "mc-007", construtoraId: "00003", categoriaId: categoriaId("00003", "Bancada"), marcaId: marcaId("00003", "Silestone"), fornecedorId: "forn-006", modelo: "Branco Ibiza", sku: "QRTZ-IBIZA", imagemUrl: null },
-  { id: "mc-008", construtoraId: "00003", categoriaId: categoriaId("00003", "Louças e Metais"), marcaId: marcaId("00003", "Docol"), fornecedorId: "forn-005", modelo: "Benefit Black", sku: "DOC-BEN-BLK", imagemUrl: null },
-  { id: "mc-009", construtoraId: "00002", categoriaId: categoriaId("00002", "Piso"), marcaId: marcaId("00002", "Portobello"), fornecedorId: "forn-007", modelo: "Marmorizado Extra", sku: "PTB-MARM-EX", imagemUrl: null },
-  { id: "mc-010", construtoraId: "00002", categoriaId: categoriaId("00002", "Bancada"), marcaId: marcaId("00002", "Dekton"), fornecedorId: "forn-007", modelo: "Sirius", sku: "DKT-SIRIUS", imagemUrl: null },
+//
+// Gerado (não digitado item a item) pra garantir o mesmo catálogo — mesmas
+// categorias, marcas e variantes — em toda construtora nova, com volume
+// suficiente pra nunca faltar material pronto ao cadastrar uma opção.
+interface ReferenciaMaterial {
+  categoria: (typeof CATEGORIAS_MATERIAL)[number];
+  marcas: (typeof MARCAS_SUGERIDAS)[number][];
+  variantes: string[];
+}
+
+const REFERENCIA_MATERIAIS: ReferenciaMaterial[] = [
+  {
+    categoria: "Piso",
+    marcas: ["Portobello", "Eliane", "Portinari", "Incepa", "Cecafi"],
+    variantes: [
+      "Acetinado 60×60 Bege", "Acetinado 60×60 Cinza", "Polido 80×80 Branco", "Polido 80×80 Grafite",
+      "Amadeirado Deck 20×120", "Marmorizado 90×90", "Externo Antiderrapante 45×45", "Grande Formato 120×120",
+      "Rústico 60×60 Areia", "Retificado 80×80 Off-White",
+    ],
+  },
+  {
+    categoria: "Revestimento",
+    marcas: ["Portobello", "Eliane", "Portinari", "Incepa", "Quartzolit"],
+    variantes: [
+      "Acetinado Bege 30×60", "Acetinado Branco 30×60", "Fosco Cinza 45×90", "Brilhante Branco 30×90",
+      "Marmorizado Branco 60×60", "Concreto Grafite 60×60", "Metrô Branco 7,5×15", "Hexagonal Cinza 20×23",
+      "Grande Formato Cimentício 90×90", "Externo Antiderrapante 30×60",
+    ],
+  },
+  {
+    categoria: "Louças e Metais",
+    marcas: ["Roca", "Deca", "Celite", "Icasa", "Docol", "Hydra", "Fabrimar", "Lorenzetti", "Perflex"],
+    variantes: [
+      "Linha Aspen Branco", "Linha Izy Branco", "Monocomando Fit Cromado", "Monocomando Slim Black",
+      "Ducha Higiênica Cromada", "Torneira Gourmet Preta", "Vaso Sanitário Suspenso Branco", "Cuba de Apoio Branca",
+      "Assento Amortecido Branco", "Monocomando Class Grafite",
+    ],
+  },
+  {
+    categoria: "Bancada",
+    marcas: ["Dekton", "Silestone", "Quartzolit"],
+    variantes: [
+      "Branco Ibiza", "Cinza Corumbá", "Preto Absoluto", "Bege Aracaju", "Grafite Ferro",
+      "Sirius", "Kalahari", "Trance", "Blanco Zeus", "Nero Marquina",
+    ],
+  },
+  {
+    categoria: "Cuba",
+    marcas: ["Franke", "Blanco", "Tramontina"],
+    variantes: [
+      "Inox Simples 50×34", "Inox Dupla 68×34", "Inox Onda Gourmet", "Granito Composto Bege",
+      "Granito Composto Grafite", "Cerâmica Branca Sobrepor", "Cerâmica Encaixe Branca", "Inox Ampliada Gourmet",
+      "Inox Gourmet com Escorredor", "Cerâmica Bege Sobrepor",
+    ],
+  },
+  {
+    categoria: "Porta",
+    marcas: ["Duratex", "Eucatex"],
+    variantes: [
+      "Lisa Freijó 35mm", "Lisa Branca 35mm", "Almofadada Freijó", "Almofadada Branca",
+      "Frisada Amadeirada", "Pivotante Preta", "De Correr Freijó", "Veneziana Branca",
+      "Lambril Amadeirado", "Blindada Reforçada",
+    ],
+  },
+  {
+    categoria: "Janela / Esquadria",
+    marcas: ["Sasazaki"],
+    variantes: [
+      "Linha Max Correr 2 Folhas", "Linha Max Correr 3 Folhas", "Basculante Branca", "Maxim-Ar Branca",
+      "Fixa com Vidro Temperado", "Veneziana de Alumínio", "Correr 4 Folhas Anodizada", "Guilhotina Branca",
+      "Pivotante Alumínio Preto", "Vitrô Basculante",
+    ],
+  },
+  {
+    categoria: "Box / Vidro",
+    marcas: ["Blindex"],
+    variantes: [
+      "Box Frontal Incolor 8mm", "Box de Canto Incolor 8mm", "Box Frontal Fumê 8mm", "Box de Canto Fumê 8mm",
+      "Espelho Bisotê 4mm", "Guarda-Corpo Incolor 10mm", "Divisória de Ambiente 10mm", "Box Angular Incolor 8mm",
+      "Porta Pivotante de Vidro 10mm", "Box Frontal Verde 8mm",
+    ],
+  },
+  {
+    categoria: "Pintura",
+    marcas: ["Suvinil", "Sherwin-Williams", "Coral"],
+    variantes: [
+      "Acrílico Fosco Branco Neve", "Acrílico Fosco Cinza Urbano", "Acrílico Acetinado Areia", "Látex Premium Off-White",
+      "Esmalte Sintético Branco", "Textura Grafiato Bege", "Acrílico Fosco Grafite", "Látex Premium Azul Sereno",
+      "Acrílico Semibrilho Branco Gelo", "Esmalte Fosco Preto",
+    ],
+  },
+  {
+    categoria: "Iluminação",
+    marcas: ["Taschibra"],
+    variantes: [
+      "Spot LED Redondo 7W 3000K", "Spot LED Quadrado 7W 4000K", "Painel LED Embutir 24W", "Fita LED 5m 3000K",
+      "Pendente Preto Fosco", "Arandela Branca Externa", "Luminária Trilho Preta", "Plafon LED Sobrepor 18W",
+      "Spot Direcionável 5W", "Luminária Pendente Dourada",
+    ],
+  },
+  {
+    categoria: "Tomada e Interruptor",
+    marcas: ["Tramontina"],
+    variantes: [
+      "Linha Liz Branca 10A", "Linha Liz Preta 10A", "Interruptor Simples Branco", "Interruptor Paralelo Branco",
+      "Tomada Dupla 20A Branca", "Tomada USB Branca", "Linha Rebite Preta", "Módulo 4×2 Branco",
+      "Interruptor Touch Preto", "Tomada RJ45 Branca",
+    ],
+  },
+  {
+    categoria: "Forro",
+    marcas: ["Tigre", "Duratex", "Eucatex"],
+    variantes: [
+      "Forro PVC Branco Liso", "Forro PVC Branco Frisado", "Forro de Gesso Liso", "Forro Modular Mineral 60×60",
+      "Forro PVC Amadeirado", "Sanca Aberta em Gesso", "Forro Drywall Standard", "Forro PVC Fresado",
+      "Forro Acústico Mineral", "Forro de Gesso com Sanca",
+    ],
+  },
+  {
+    categoria: "Rodapé",
+    marcas: ["Duratex", "Eucatex"],
+    variantes: [
+      "MDF Branco 7cm", "MDF Branco 10cm", "MDF Amadeirado 10cm", "MDF Amadeirado 15cm",
+      "Poliestireno Branco 7cm", "Alumínio Escovado 5cm", "MDF Preto Fosco 7cm", "PVC Branco 10cm",
+      "MDF Cinza Grafite 10cm", "Meia-Cana Branca 5cm",
+    ],
+  },
+  {
+    categoria: "Armário Planejado",
+    marcas: ["Todeschini", "Bertolini"],
+    variantes: [
+      "Living Connect Carvalho", "Living Connect Branco", "Cozinha Compacta Branca", "Cozinha Compacta Preto Fosco",
+      "Closet Modulado Off-White", "Home Office Compacto Carvalho", "Painel Ripado Amadeirado", "Cozinha Ilha Grafite",
+      "Guarda-Roupa Casal Branco", "Bancada com Gavetas Carvalho",
+    ],
+  },
+  {
+    categoria: "Eletrodoméstico",
+    marcas: ["Brastemp"],
+    variantes: [
+      "Cooktop 5 Bocas Inox", "Forno de Embutir 60L", "Coifa de Ilha Inox", "Coifa de Parede Inox",
+      "Micro-ondas de Embutir", "Adega Climatizada 46 Garrafas", "Lava-Louças 14 Serviços", "Depurador de Ar Inox",
+      "Cooktop de Indução 4 Zonas", "Forno e Micro-ondas Combinado",
+    ],
+  },
+  {
+    categoria: "Automação",
+    marcas: ["Intelbras"],
+    variantes: [
+      "Kit Interruptor Inteligente Wi-Fi", "Fechadura Inteligente Wi-Fi", "Câmera Inteligente Interna", "Central de Automação Residencial",
+      "Sensor de Presença Wi-Fi", "Tomada Inteligente Wi-Fi", "Cortina Motorizada Wi-Fi", "Campainha Inteligente com Vídeo",
+      "Sensor de Abertura Wi-Fi", "Assistente de Automação por Voz",
+    ],
+  },
+  {
+    categoria: "Ar-condicionado",
+    marcas: ["Springer"],
+    variantes: [
+      "Split Hi-Wall 9000 BTUs Inverter", "Split Hi-Wall 12000 BTUs Inverter", "Split Hi-Wall 18000 BTUs Inverter", "Split Hi-Wall 24000 BTUs Inverter",
+      "Multi Split 2 Ambientes", "Cassete 36000 BTUs", "Portátil 10000 BTUs", "Janela 7500 BTUs",
+      "Split Inverter Dual 12000 BTUs", "VRF Comercial Compacto",
+    ],
+  },
+  {
+    categoria: "Fechadura",
+    marcas: ["Papaiz", "Fischer"],
+    variantes: [
+      "Fechadura Digital Biométrica", "Fechadura Digital com Senha", "Fechadura Tetra Cromada", "Fechadura Rolete Cromada",
+      "Fechadura de Embutir Preta", "Dobradiça Reforçada Inox", "Fechadura Digital com App", "Trinco Multiponto",
+      "Fechadura Tetra Preta Fosca", "Fechadura de Sobrepor Cromada",
+    ],
+  },
 ];
+
+// Volume por categoria: 10 variantes × 3 voltas (a 2ª e 3ª volta ganham
+// sufixo " 2"/" 3" pra não duplicar o nome) — 18 categorias × 30 = 540
+// materiais por construtora, o mesmo catálogo pras 3 construtoras.
+const MATERIAIS_POR_CATEGORIA = 30;
+
+// Imagem por modelo (não por categoria) — cada variante de material tem
+// sua própria foto na demo. Picsum com seed determinístico garante uma
+// foto estável (nunca quebra) por nome de modelo, sem precisar curar 1620
+// fotos reais (18 categorias × 30 × 3 construtoras) num seed de protótipo
+// — não é foto real do produto.
+const imagemDoModelo = (modelo: string): string => `https://picsum.photos/seed/${encodeURIComponent(modelo)}/200/150`;
+
+function gerarMateriaisDaConstrutora(construtoraId: string): MaterialCatalogItem[] {
+  const fornecedoresDaConstrutora = fornecedoresIniciais.filter((f) => f.construtoraId === construtoraId);
+  const itens: MaterialCatalogItem[] = [];
+  let seq = 0;
+  for (const ref of REFERENCIA_MATERIAIS) {
+    for (let i = 0; i < MATERIAIS_POR_CATEGORIA; i++) {
+      const marca = ref.marcas[i % ref.marcas.length];
+      const volta = Math.floor(i / ref.variantes.length);
+      const variante = ref.variantes[i % ref.variantes.length];
+      const modelo = volta > 0 ? `${variante} ${volta + 1}` : variante;
+      const fornecedor = fornecedoresDaConstrutora[seq % fornecedoresDaConstrutora.length];
+      seq += 1;
+      const catAbrev = ref.categoria.replace(/[^A-Za-zÀ-ÿ]/g, "").slice(0, 3).toUpperCase();
+      itens.push({
+        id: `mc-${construtoraId}-${String(seq).padStart(4, "0")}`,
+        construtoraId,
+        categoriaId: categoriaId(construtoraId, ref.categoria),
+        marcaId: marcaId(construtoraId, marca),
+        fornecedorId: fornecedor.id,
+        modelo,
+        sku: `${marca.slice(0, 3).toUpperCase()}-${catAbrev}-${String(seq).padStart(4, "0")}`,
+        imagemUrl: imagemDoModelo(modelo),
+      });
+    }
+  }
+  return itens;
+}
+
+export const materialCatalogInicial: MaterialCatalogItem[] = CONSTRUTORA_IDS.flatMap(gerarMateriaisDaConstrutora);
 
 export const solicitacoesIniciais: Solicitacao[] = [
   {
