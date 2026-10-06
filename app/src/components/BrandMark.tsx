@@ -18,7 +18,7 @@ interface BrandMarkProps {
 export function BrandMark({ size = 22, withLabel = true, light = true }: BrandMarkProps) {
   return (
     <span className="brandmark-lockup" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-      <img src="/brand/plantta-icon.png" alt="" width={size} height={size} style={{ flexShrink: 0, objectFit: "contain" }} />
+      <img src={`${import.meta.env.BASE_URL}brand/plantta-icon.png`} alt="" width={size} height={size} style={{ flexShrink: 0, objectFit: "contain" }} />
       {withLabel && <Wordmark style={{ color: light ? "#fff" : "var(--ink)" }} />}
     </span>
   );

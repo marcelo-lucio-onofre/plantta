@@ -12,8 +12,8 @@ import { bboxCentralizado, centralizarPoligono, gerarParedes, indiceParedeDeFund
 // KTX2/Basis Universal ETC1S (textura) via scripts/compress-model.mjs. Os
 // decoders (public/decoders/) são os mesmos que o three.js usa em produção
 // — nada depende de CDN externo em runtime.
-const DRACO_DECODER_PATH = "/decoders/draco/";
-const KTX2_TRANSCODER_PATH = "/decoders/basis/";
+const DRACO_DECODER_PATH = `${import.meta.env.BASE_URL}decoders/draco/`;
+const KTX2_TRANSCODER_PATH = `${import.meta.env.BASE_URL}decoders/basis/`;
 
 interface ModeloReferencia {
   url: string;
@@ -24,17 +24,17 @@ interface ModeloReferencia {
 
 const MODELOS: Record<"cadeira" | "sofa" | "geladeira", ModeloReferencia> = {
   cadeira: {
-    url: "/models/sheen-chair.glb",
+    url: `${import.meta.env.BASE_URL}models/sheen-chair.glb`,
     reducao: "3,93MB → 0,69MB (−82%)",
     credito: "Cadeira: Eric Chadwick/Wayfair, CC0 — glTF-Sample-Assets (Khronos)",
   },
   sofa: {
-    url: "/models/sheen-sofa.glb",
+    url: `${import.meta.env.BASE_URL}models/sheen-sofa.glb`,
     reducao: "10,11MB → 3,57MB (−63%)",
     credito: "Sofá: Darmstadt Graphics Group/Fran Calvente, CC-BY 4.0 — glTF-Sample-Assets (Khronos)",
   },
   geladeira: {
-    url: "/models/commercial-refrigerator.glb",
+    url: `${import.meta.env.BASE_URL}models/commercial-refrigerator.glb`,
     reducao: "9,66MB → 3,33MB (−66%)",
     credito: "Geladeira: Darmstadt Graphics Group/Sean Thomas, CC-BY 4.0 — glTF-Sample-Assets (Khronos)",
   },
