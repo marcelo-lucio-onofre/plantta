@@ -1,0 +1,29 @@
+{
+  "name": "plantta (app)",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+
+  "postCreateCommand": "cd app && npm install --legacy-peer-deps",
+  "postStartCommand": "bash .devcontainer/start-dev.sh",
+
+  "forwardPorts": [5173],
+  "portsAttributes": {
+    "5173": {
+      "label": "plantta (vite dev)",
+      "onAutoForward": "openPreview"
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode"]
+    },
+    "codespaces": {
+      "openFiles": ["app/src/App.tsx"]
+    }
+  },
+
+  "remoteEnv": {
+    "BROWSER": "none"
+  }
+}

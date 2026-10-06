@@ -12,6 +12,7 @@ import type {
   MaterialCatalogItem,
   Pessoa,
   Planta,
+  PlantaGeometria3D,
   Solicitacao,
   TipoAmbiente,
   TipoPapel,
@@ -19,6 +20,56 @@ import type {
 } from "../domain/types";
 import { plantaKey } from "../domain/calculations";
 import { AMBIENTES_SUGERIDOS, CATEGORIAS_MATERIAL, MARCAS_SUGERIDAS } from "../domain/catalogoReferencia";
+import { parseDxfAmbientes } from "../lib/dxfPlanta";
+import dxfSala from "../assets/plantas-dxf/sala.dxf?raw";
+import dxfCozinha from "../assets/plantas-dxf/cozinha.dxf?raw";
+import dxfBanheiro from "../assets/plantas-dxf/banheiro.dxf?raw";
+import dxfVaranda from "../assets/plantas-dxf/varanda.dxf?raw";
+import dxfVvSala from "../assets/plantas-dxf/vistaverde/sala.dxf?raw";
+import dxfVvCozinha from "../assets/plantas-dxf/vistaverde/cozinha.dxf?raw";
+import dxfVvBanheiro from "../assets/plantas-dxf/vistaverde/banheiro.dxf?raw";
+import dxfVvVaranda from "../assets/plantas-dxf/vistaverde/varanda.dxf?raw";
+import dxfBlvSala from "../assets/plantas-dxf/boulevard/sala.dxf?raw";
+import dxfBlvCozinha from "../assets/plantas-dxf/boulevard/cozinha.dxf?raw";
+import dxfBlvBanheiro from "../assets/plantas-dxf/boulevard/banheiro.dxf?raw";
+import dxfBlvVaranda from "../assets/plantas-dxf/boulevard/varanda.dxf?raw";
+
+// Geometria 3D real de cada construtora do seed, gerada a partir dos DXFs
+// de exemplo em src/assets/plantas-dxf/ (padrão ARQ-AMB/ARQ-AMB-TXT — ver
+// docs/padrao-plantas-dxf.md e lib/dxfPlanta.ts). Isso roda o parser de
+// verdade no carregamento do app, não são coordenadas digitadas à mão —
+// cada construtora tem sua própria planta (dimensões diferentes, cozinha
+// da Boulevard em L com o entalhe do outro lado da de Aurora), prova que a
+// esteira funciona com plantas reais distintas, não é uma cópia.
+const geometriaPlantaAAurora: PlantaGeometria3D = {
+  peDireitoM: 2.6,
+  ambientes: [
+    ...parseDxfAmbientes(dxfSala, "m"),
+    ...parseDxfAmbientes(dxfCozinha, "m"),
+    ...parseDxfAmbientes(dxfBanheiro, "m"),
+    ...parseDxfAmbientes(dxfVaranda, "m"),
+  ],
+};
+
+const geometriaPlantaVistaVerde: PlantaGeometria3D = {
+  peDireitoM: 2.6,
+  ambientes: [
+    ...parseDxfAmbientes(dxfVvSala, "m"),
+    ...parseDxfAmbientes(dxfVvCozinha, "m"),
+    ...parseDxfAmbientes(dxfVvBanheiro, "m"),
+    ...parseDxfAmbientes(dxfVvVaranda, "m"),
+  ],
+};
+
+const geometriaPlantaBoulevard: PlantaGeometria3D = {
+  peDireitoM: 2.7,
+  ambientes: [
+    ...parseDxfAmbientes(dxfBlvSala, "m"),
+    ...parseDxfAmbientes(dxfBlvCozinha, "m"),
+    ...parseDxfAmbientes(dxfBlvBanheiro, "m"),
+    ...parseDxfAmbientes(dxfBlvVaranda, "m"),
+  ],
+};
 
 // Plain-data deep clone (Ambiente/Item/Opcao are all JSON-safe: no
 // functions/Dates) — used so each empreendimento gets its own independent
@@ -310,8 +361,8 @@ export const ambientes: Ambiente[] = [
         prazoInicio: "01/09/2026",
         prazoFim: "20/10/2026",
         opcoes: [
-          { id: "p1", nome: "Porcelanato Standard 60×60", preco: 6000, padrao: true },
-          { id: "p2", nome: "Porcelanato Portobello Premium 80×80", preco: 8500 },
+          { id: "p1", nome: "Porcelanato Standard 60×60", preco: 6000, padrao: true, materialCatalogItemId: "mc-013" },
+          { id: "p2", nome: "Porcelanato Portobello Premium 80×80", preco: 8500, materialCatalogItemId: "mc-001" },
           { id: "p3", nome: "Porcelanato Marmorizado Extra", preco: 9800 },
           { id: "p0", nome: "Remover item (gera crédito)", preco: 0, remocao: true },
         ],
@@ -374,9 +425,9 @@ export const ambientes: Ambiente[] = [
         prazoInicio: "20/08/2026",
         prazoFim: "15/09/2026",
         opcoes: [
-          { id: "b1", nome: "Granito Cinza Corumbá", preco: 3200, padrao: true },
+          { id: "b1", nome: "Granito Cinza Corumbá", preco: 3200, padrao: true, materialCatalogItemId: "mc-014" },
           { id: "b2", nome: "Quartzo Branco Ibiza", preco: 4900 },
-          { id: "b3", nome: "Dekton Sirius", preco: 6100 },
+          { id: "b3", nome: "Dekton Sirius", preco: 6100, materialCatalogItemId: "mc-002" },
           { id: "b0", nome: "Remover item (gera crédito)", preco: 0, remocao: true },
         ],
       },
@@ -414,6 +465,20 @@ export const ambientes: Ambiente[] = [
     nome: "Banheiro Suíte",
     itens: [
       {
+        id: "piso_banheiro",
+        nome: "Piso",
+        nivel: 1,
+        padrao: "Porcelanato Antiderrapante Bege",
+        valorPadrao: 1900,
+        prazoInicio: "01/09/2026",
+        prazoFim: "20/10/2026",
+        opcoes: [
+          { id: "psb1", nome: "Porcelanato Antiderrapante Bege", preco: 1900, padrao: true, materialCatalogItemId: "mc-015" },
+          { id: "psb2", nome: "Porcelanato Antiderrapante Areia", preco: 2300, materialCatalogItemId: "mc-011" },
+          { id: "psb0", nome: "Remover item (gera crédito)", preco: 0, remocao: true },
+        ],
+      },
+      {
         id: "revestimento",
         nome: "Revestimento",
         nivel: 1,
@@ -423,7 +488,7 @@ export const ambientes: Ambiente[] = [
         prazoFim: "20/10/2026",
         opcoes: [
           { id: "rv1", nome: "Porcelanato Acetinado Bege", preco: 2400, padrao: true },
-          { id: "rv2", nome: "Porcelanato Off-White Grande Formato", preco: 3600 },
+          { id: "rv2", nome: "Porcelanato Off-White Grande Formato", preco: 3600, materialCatalogItemId: "mc-012" },
           { id: "rv0", nome: "Remover item (gera crédito)", preco: 0, remocao: true },
         ],
       },
@@ -468,7 +533,7 @@ export const ambientes: Ambiente[] = [
         prazoFim: "20/10/2026",
         opcoes: [
           { id: "pv1", nome: "Porcelanato Externo Cinza", preco: 3800, padrao: true },
-          { id: "pv2", nome: "Porcelanato Amadeirado Deck", preco: 5200 },
+          { id: "pv2", nome: "Porcelanato Amadeirado Deck", preco: 5200, materialCatalogItemId: "mc-001" },
           { id: "pv0", nome: "Remover item (gera crédito)", preco: 0, remocao: true },
         ],
       },
@@ -620,6 +685,7 @@ const ambientesPlantaBAurora: Ambiente[] = [
 const ARQUIVOS_PLANTA_VAZIOS: Planta["arquivos"] = {
   plantaArquitetonicaPdf: [], plantaImagem: [], dwg: [], plantaHumanizada: [], plantaMobiliada: [],
   plantaEletrica: [], plantaHidraulica: [], plantaPontos: [], memorialTipologia: [], renderizacoes: [],
+  modelo3d: [],
 };
 
 // Plantas (tipologias de unidade) por empreendimento — um prédio de
@@ -627,13 +693,36 @@ const ARQUIVOS_PLANTA_VAZIOS: Planta["arquivos"] = {
 // pertence à Planta, não ao empreendimento (ver domain/types.ts Planta).
 export const plantasPorEmpreendimento: Record<string, Planta[]> = {
   "00001": [
-    { id: "planta-a", codigo: "PA-01", nome: "Planta A — 2 quartos", tipologia: "2 quartos", descricao: "2 dormitórios, 1 suíte", areaPrivativaM2: 68, areaTotalM2: 78, quartos: 2, suites: 1, banheiros: 2, vagas: 1, numeroAmbientes: 6, versao: "1.0", dataVersao: "10/01/2026", status: "ativa", opcoesPermitidas: "Piso, revestimento, metais, louças", restricoes: "Sem alteração de estrutura ou hidráulica de posição fixa", unidadesLabel: "Torres A e B, andares 2–14", arquivos: ARQUIVOS_PLANTA_VAZIOS },
+    { id: "planta-a", codigo: "PA-01", nome: "Planta A — 2 quartos", tipologia: "2 quartos", descricao: "2 dormitórios, 1 suíte", areaPrivativaM2: 68, areaTotalM2: 78, quartos: 2, suites: 1, banheiros: 2, vagas: 1, numeroAmbientes: 6, versao: "1.0", dataVersao: "10/01/2026", status: "ativa", opcoesPermitidas: "Piso, revestimento, metais, louças", restricoes: "Sem alteração de estrutura ou hidráulica de posição fixa", unidadesLabel: "Torres A e B, andares 2–14", arquivos: ARQUIVOS_PLANTA_VAZIOS, geometria3D: geometriaPlantaAAurora },
     { id: "planta-b", codigo: "PB-01", nome: "Planta B — 3 quartos", tipologia: "3 quartos", descricao: "3 dormitórios, suíte master com closet opcional", areaPrivativaM2: 94, areaTotalM2: 108, quartos: 3, suites: 1, banheiros: 3, vagas: 2, numeroAmbientes: 8, versao: "1.0", dataVersao: "10/01/2026", status: "ativa", opcoesPermitidas: "Piso, revestimento, metais, louças, bancadas", restricoes: "Sem alteração de estrutura ou hidráulica de posição fixa", unidadesLabel: "Torres A e B, andares 15–20 (coberturas e garden)", arquivos: ARQUIVOS_PLANTA_VAZIOS },
   ],
-  "00002": [{ id: "planta-unica", codigo: "PU-01", nome: "Planta Única", tipologia: "2 quartos", descricao: "2 dormitórios, 1 suíte", areaPrivativaM2: 62, areaTotalM2: 70, quartos: 2, suites: 1, banheiros: 2, vagas: 1, numeroAmbientes: 6, versao: "1.0", dataVersao: "05/02/2026", status: "ativa", opcoesPermitidas: "Piso, revestimento, metais, louças", restricoes: "Sem alteração de estrutura", unidadesLabel: "Todas as unidades", arquivos: ARQUIVOS_PLANTA_VAZIOS }],
-  "00003": [{ id: "planta-unica", codigo: "PU-01", nome: "Planta Única", tipologia: "2 quartos", descricao: "2 dormitórios, 1 suíte", areaPrivativaM2: 75, areaTotalM2: 85, quartos: 2, suites: 1, banheiros: 2, vagas: 2, numeroAmbientes: 6, versao: "1.0", dataVersao: "12/03/2026", status: "ativa", opcoesPermitidas: "Piso, revestimento, metais, louças, bancadas", restricoes: "Sem alteração de estrutura", unidadesLabel: "Torres A e B, todos os andares", arquivos: ARQUIVOS_PLANTA_VAZIOS }],
+  "00002": [{ id: "planta-unica", codigo: "PU-01", nome: "Planta Única", tipologia: "2 quartos", descricao: "2 dormitórios, 1 suíte", areaPrivativaM2: 62, areaTotalM2: 70, quartos: 2, suites: 1, banheiros: 2, vagas: 1, numeroAmbientes: 6, versao: "1.0", dataVersao: "05/02/2026", status: "ativa", opcoesPermitidas: "Piso, revestimento, metais, louças", restricoes: "Sem alteração de estrutura", unidadesLabel: "Todas as unidades", arquivos: ARQUIVOS_PLANTA_VAZIOS, geometria3D: geometriaPlantaVistaVerde }],
+  "00003": [{ id: "planta-unica", codigo: "PU-01", nome: "Planta Única", tipologia: "2 quartos", descricao: "2 dormitórios, 1 suíte", areaPrivativaM2: 75, areaTotalM2: 85, quartos: 2, suites: 1, banheiros: 2, vagas: 2, numeroAmbientes: 6, versao: "1.0", dataVersao: "12/03/2026", status: "ativa", opcoesPermitidas: "Piso, revestimento, metais, louças, bancadas", restricoes: "Sem alteração de estrutura", unidadesLabel: "Torres A e B, todos os andares", arquivos: ARQUIVOS_PLANTA_VAZIOS, geometria3D: geometriaPlantaBoulevard }],
   "00004": [{ id: "planta-unica", codigo: "PU-01", nome: "Planta Única", tipologia: "3 quartos", descricao: "3 dormitórios, 1 suíte", areaPrivativaM2: 88, areaTotalM2: 100, quartos: 3, suites: 1, banheiros: 2, vagas: 2, numeroAmbientes: 7, versao: "1.0", dataVersao: "20/03/2026", status: "ativa", opcoesPermitidas: "Piso, revestimento, metais, louças", restricoes: "Sem alteração de estrutura", unidadesLabel: "Torre única", arquivos: ARQUIVOS_PLANTA_VAZIOS }],
 };
+
+// `ambientes` é reaproveitado (clonado) por 00002/00003/00004 — mesmos
+// ids de ambiente/item/opção em todo mundo, então um materialCatalogItemId
+// escrito direto no template só resolve pra UMA construtora (a dona
+// daquele id). Pra cada clone mostrar fotos do catálogo dela mesma (não a
+// do template, que é sempre 00001), sobrescreve pontualmente depois de
+// clonar — resto do catálogo (itens sem entrada aqui) fica igual ao
+// template, sem material vinculado.
+function vincularMateriais(ambientesClone: Ambiente[], vinculos: Record<string, Record<string, Record<string, string>>>) {
+  for (const amb of ambientesClone) {
+    const porItem = vinculos[amb.id];
+    if (!porItem) continue;
+    for (const item of amb.itens) {
+      const porOpcao = porItem[item.id];
+      if (!porOpcao) continue;
+      for (const opcao of item.opcoes) {
+        const materialId = porOpcao[opcao.id];
+        if (materialId) opcao.materialCatalogItemId = materialId;
+      }
+    }
+  }
+  return ambientesClone;
+}
 
 // Cada Planta tem seu próprio catálogo, completamente independente —
 // editar a Planta A via CatalogoPage nunca toca a Planta B nem outro
@@ -641,8 +730,16 @@ export const plantasPorEmpreendimento: Record<string, Planta[]> = {
 export const ambientesPorPlanta: Record<string, Ambiente[]> = {
   [plantaKey("00001", "planta-a")]: ambientes,
   [plantaKey("00001", "planta-b")]: ambientesPlantaBAurora,
-  [plantaKey("00002", "planta-unica")]: clonar(ambientes),
-  [plantaKey("00003", "planta-unica")]: clonar(ambientes),
+  [plantaKey("00002", "planta-unica")]: vincularMateriais(clonar(ambientes), {
+    sala: { piso_sala: { p1: "mc-016", p2: "mc-009" } },
+    cozinha: { bancada: { b1: "mc-017", b3: "mc-010" } }, // b3 = "Dekton Sirius", mc-010 é Dekton Sirius
+    banheiro: { piso_banheiro: { psb1: "mc-018", psb2: "mc-009" } },
+  }),
+  [plantaKey("00003", "planta-unica")]: vincularMateriais(clonar(ambientes), {
+    sala: { piso_sala: { p1: "mc-019", p2: "mc-005" } },
+    cozinha: { bancada: { b1: "mc-020", b2: "mc-007" } }, // b2 = "Quartzo Branco Ibiza", mc-007 é Silestone Branco Ibiza
+    banheiro: { piso_banheiro: { psb1: "mc-021", psb2: "mc-005" }, revestimento: { rv2: "mc-006" } },
+  }),
   [plantaKey("00004", "planta-unica")]: clonar(ambientes),
 };
 

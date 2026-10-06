@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Link } from "react-router-dom";
-import { Pencil, Plus, Trash2, X } from "lucide-react";
+import { Pencil, Plus, Trash2, X, Box, Smartphone } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { DataTable } from "../components/DataTable";
 import { FilterBar, textMatch } from "../components/FilterBar";
@@ -9,6 +9,13 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { FormField } from "../components/FormField";
 import { ImageThumb } from "../components/ImageThumb";
 import { useToast } from "../components/Toast";
+import { registrarVisualizacao } from "../lib/analytics";
+
+// Carregado sob demanda — puxa three.js/R3F/model-viewer, ~400KB, só quando
+// o modal com foto cadastrada é aberto (a maioria das páginas nunca precisa
+// desse peso).
+const Material3DPreview = lazy(() => import("../components/Material3DPreview").then((m) => ({ default: m.Material3DPreview })));
+const MaterialARSwatch = lazy(() => import("../components/MaterialARSwatch").then((m) => ({ default: m.MaterialARSwatch })));
 import { useApp } from "../state/AppContext";
 import { useLoading } from "../state/LoadingContext";
 import { materiaisEmUsoIds } from "../domain/usage";
@@ -23,6 +30,8 @@ interface Draft {
   modelo: string;
   sku: string;
   imagemUrl: string | null;
+  roughness: number;
+  metalness: number;
   errors: Partial<Record<"categoriaId" | "marcaId" | "fornecedorId" | "modelo", string>>;
 }
 
@@ -43,6 +52,7 @@ export function MateriaisPage() {
   const [marcaFiltro, setMarcaFiltro] = useState("");
   const [fornecedorFiltro, setFornecedorFiltro] = useState("");
   const [modal, setModal] = useState<Draft | null>(null);
+  const [previewModo, setPreviewModo] = useState<"3d" | "ar">("3d");
   const [excluindo, setExcluindo] = useState<MaterialCatalogItem | null>(null);
 
   const categoriaNome = (id: string) => categorias.find((c) => c.id === id)?.nome ?? "?";
@@ -58,11 +68,35 @@ export function MateriaisPage() {
   );
 
   function abrirCriar() {
-    setModal({ categoriaId: categorias[0]?.id ?? "", marcaId: marcas[0]?.id ?? "", fornecedorId: fornecedores[0]?.id ?? "", modelo: "", sku: "", imagemUrl: null, errors: {} });
+    setPreviewModo("3d");
+    setModal({
+      categoriaId: categorias[0]?.id ?? "",
+      marcaId: marcas[0]?.id ?? "",
+      fornecedorId: fornecedores[0]?.id ?? "",
+      modelo: "",
+      sku: "",
+      imagemUrl: null,
+      roughness: 0.5,
+      metalness: 0,
+      errors: {},
+    });
   }
   function abrirEditar(m: MaterialCatalogItem) {
-    setModal({ id: m.id, categoriaId: m.categoriaId, marcaId: m.marcaId, fornecedorId: m.fornecedorId, modelo: m.modelo, sku: m.sku, imagemUrl: m.imagemUrl, errors: {} });
+    setPreviewModo("3d");
+    setModal({
+      id: m.id,
+      categoriaId: m.categoriaId,
+      marcaId: m.marcaId,
+      fornecedorId: m.fornecedorId,
+      modelo: m.modelo,
+      sku: m.sku,
+      imagemUrl: m.imagemUrl,
+      roughness: m.roughness ?? 0.5,
+      metalness: m.metalness ?? 0,
+      errors: {},
+    });
   }
+
 
   function handleImagem(fileList: FileList | null) {
     const file = fileList?.[0];
@@ -88,7 +122,7 @@ export function MateriaisPage() {
       setModal({ ...modal, errors });
       return;
     }
-    const payload = { categoriaId: modal.categoriaId, marcaId: modal.marcaId, fornecedorId: modal.fornecedorId, modelo: modal.modelo.trim(), sku: modal.sku.trim(), imagemUrl: modal.imagemUrl };
+    const payload = { categoriaId: modal.categoriaId, marcaId: modal.marcaId, fornecedorId: modal.fornecedorId, modelo: modal.modelo.trim(), sku: modal.sku.trim(), imagemUrl: modal.imagemUrl, roughness: modal.roughness, metalness: modal.metalness };
     const editando = Boolean(modal.id);
     const id = modal.id;
     runComLoading(() => {
@@ -203,7 +237,7 @@ export function MateriaisPage() {
         />
       )}
 
-      <Modal open={modal !== null} onClose={() => setModal(null)} title={modal?.id ? "Editar material" : "Novo material"}>
+      <Modal open={modal !== null} onClose={() => setModal(null)} title={modal?.id ? "Editar material" : "Novo material"} maxWidth={560}>
         {modal && (
           <form onSubmit={(e) => { e.preventDefault(); salvar(); }} className="stack gap-sm">
             <FormField label="Categoria" htmlFor="mat-categoria" required error={modal.errors.categoriaId}>
@@ -266,6 +300,60 @@ export function MateriaisPage() {
                 )}
               </div>
             </FormField>
+
+            {modal.imagemUrl && (
+              <>
+                <div className="grid grid-2" style={{ gap: 10 }}>
+                  <FormField label={`Aspereza (roughness) — ${modal.roughness.toFixed(2)}`} htmlFor="mat-roughness" hint="0 = espelhado, 1 = fosco">
+                    <input
+                      id="mat-roughness"
+                      type="range"
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      value={modal.roughness}
+                      onChange={(e) => setModal({ ...modal, roughness: Number(e.target.value) })}
+                    />
+                  </FormField>
+                  <FormField label={`Metalicidade — ${modal.metalness.toFixed(2)}`} htmlFor="mat-metalness" hint="0 = não-metal, 1 = metal puro">
+                    <input
+                      id="mat-metalness"
+                      type="range"
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      value={modal.metalness}
+                      onChange={(e) => setModal({ ...modal, metalness: Number(e.target.value) })}
+                    />
+                  </FormField>
+                </div>
+                <div className="row gap-sm" style={{ marginBottom: 10 }}>
+                  <button type="button" className={previewModo === "3d" ? "btn btn--sm btn--primary" : "btn btn--sm"} onClick={() => setPreviewModo("3d")}>
+                    <Box size={14} /> Preview 3D
+                  </button>
+                  <button
+                    type="button"
+                    className={previewModo === "ar" ? "btn btn--sm btn--primary" : "btn btn--sm"}
+                    onClick={() => {
+                      if (previewModo !== "ar" && modal.id) registrarVisualizacao({ nome: "preview_ar_material_catalogo", materialId: modal.id, modelo: modal.modelo });
+                      setPreviewModo("ar");
+                    }}
+                  >
+                    <Smartphone size={14} /> Ver em AR
+                  </button>
+                </div>
+                {previewModo === "3d" ? (
+                  <Suspense fallback={<div className="text-soft" style={{ fontSize: 12.5, padding: 12 }}>Carregando preview 3D…</div>}>
+                    <Material3DPreview imagemUrl={modal.imagemUrl} roughness={modal.roughness} metalness={modal.metalness} height={200} />
+                  </Suspense>
+                ) : (
+                  <Suspense fallback={<div className="text-soft" style={{ fontSize: 12.5, padding: 12 }}>Preparando visualização em AR…</div>}>
+                    <MaterialARSwatch imagemUrl={modal.imagemUrl} nome={modal.modelo || "Material"} roughness={modal.roughness} metalness={modal.metalness} height={280} />
+                  </Suspense>
+                )}
+              </>
+            )}
+
             <div className="row gap-sm" style={{ justifyContent: "flex-end", marginTop: 10 }}>
               <button type="button" className="btn btn--sm" onClick={() => setModal(null)}>Cancelar</button>
               <button type="submit" className="btn btn--primary btn--sm">Salvar</button>
